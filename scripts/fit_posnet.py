@@ -18,12 +18,12 @@ from torch.distributed.algorithms.join import Join
 
 from mlspm import utils
 import mlspm.preprocessing as pp
+import mlspm.data_loading as dl
+from mlspm.logging import LossLogPlot, SyncedLoss
 import asdafm.graph.graph_utils     as gu
-import asdafm.data_loading          as dl
 import asdafm.visualization         as vis
 from asdafm.graph.models            import PosNetAdaptive
 from asdafm.parsing_utils           import update_config
-from asdafm.logging                 import LossLogPlot, SyncedLoss
 
 def make_model(device, cfg):
     model = PosNetAdaptive(

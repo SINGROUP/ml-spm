@@ -1,12 +1,11 @@
 import glob
 import os
 import re
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.distributed as dist
-
-from typing import Optional
 
 elements = [
     "H",
@@ -65,6 +64,12 @@ elements = [
     "Xe",
 ]
 
+def _calc_plot_dim(n, f=0.3):
+    rows = max(int(np.sqrt(n) - f), 1)
+    cols = 1
+    while rows*cols < n:
+        cols += 1
+    return rows, cols
 
 def _get_distributed():
     try:
