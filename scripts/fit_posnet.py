@@ -20,13 +20,13 @@ from mlspm import utils
 import mlspm.preprocessing as pp
 import mlspm.data_loading as dl
 from mlspm.logging import LossLogPlot, SyncedLoss
+from mlspm.models import PosNet
 import asdafm.graph.graph_utils     as gu
 import asdafm.visualization         as vis
-from asdafm.graph.models            import PosNetAdaptive
 from asdafm.parsing_utils           import update_config
 
 def make_model(device, cfg):
-    model = PosNetAdaptive(
+    model = PosNet(
         encode_block_channels   = [16, 32, 64, 128],
         encode_block_depth      = 3,
         decode_block_channels   = [128, 64, 32],
