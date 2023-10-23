@@ -17,8 +17,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.distributed.algorithms.join import Join
 
 from mlspm import utils
+import mlspm.preprocessing as pp
 import asdafm.graph.graph_utils     as gu
-import asdafm.preprocessing         as pp
 import asdafm.data_loading          as dl
 import asdafm.visualization         as vis
 from asdafm.graph.models            import PosNetAdaptive
@@ -64,7 +64,7 @@ def apply_preprocessing(batch, cfg):
     X = [x[:, :, :, -nz:] for x in X] if z0 == 0 else [x[:, :, :, -(nz+z0):-z0] for x in X]
 
     # atoms = [a[a[:, -1] != 29] for a in atoms]
-    atoms = pp.top_atom_to_zero(atoms)
+    pp.top_atom_to_zero(atoms)
     xyz = atoms.copy()
     mols = [gu.MoleculeGraph(a, []) for a in atoms]
     mols, sw = gu.shift_mols_window(mols, scan_windows[0])
@@ -74,7 +74,7 @@ def apply_preprocessing(batch, cfg):
         (box_res[0]*(X[0].shape[1] - 1), box_res[1]*(X[0].shape[2] - 1), z_lims[1])
     )
 
-    pp.rand_shift_xy_trend(X, shift_step_max=0.02, max_shift_total=0.04)
+    pp.rand_shift_xy_trend(X, max_layer_shift=0.02, max_total_shift=0.04)
     X, mols, box_borders = gu.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
         reflections=True, crop=(128, 128), per_batch_item=True)
     # X, mols, box_borders = gu.random_crop_graph(X, mols, box_borders, min_crop=0.6,
