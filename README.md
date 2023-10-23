@@ -1,2 +1,4 @@
-# ml-spm
-Machine learning for SPM
+# ML-SPM
+Machine learning for scanning probe microscopy
+
+Under construction...
