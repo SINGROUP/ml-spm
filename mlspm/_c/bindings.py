@@ -9,7 +9,7 @@ from ctypes import c_int, c_float, POINTER
 N_POOL_PROC = mp.cpu_count()
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-clib = ctypes.CDLL(os.path.join(this_dir, 'asdafm_lib.so'))
+clib = ctypes.CDLL(os.path.join(this_dir, 'mlspm_lib.so'))
 
 fp_p = POINTER(c_float)
 int_p = POINTER(c_int)

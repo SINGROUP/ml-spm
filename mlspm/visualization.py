@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Colormap
 
-from . import common_utils as cu
 # Make subpackage plotting tools also available
 from .graph.visualization import *
+from .utils import _calc_plot_dim
 
 
 def plot_input(X: np.ndarray, constant_range: bool = False, cmap: str | Colormap = "afmhot") -> plt.Figure:
@@ -20,7 +20,7 @@ def plot_input(X: np.ndarray, constant_range: bool = False, cmap: str | Colormap
 
     Returns: Figure on which the image was plotted.
     """
-    rows, cols = cu._calc_plot_dim(X.shape[-1])
+    rows, cols = _calc_plot_dim(X.shape[-1])
     fig = plt.figure(figsize=(3.2 * cols, 2.5 * rows))
     vmax = X.max()
     vmin = X.min()

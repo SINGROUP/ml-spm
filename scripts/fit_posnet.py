@@ -16,6 +16,8 @@ from torch import nn, optim
 from torch.distributed.algorithms.join import Join
 from torch.nn.parallel import DistributedDataParallel
 
+import sys
+sys.path.append('/home/work/git/ml-spm')
 import mlspm.data_loading as dl
 import mlspm.preprocessing as pp
 import mlspm.visualization as vis
@@ -26,6 +28,7 @@ from mlspm.models import PosNet
 
 
 def make_model(device, cfg):
+    outsize = round((cfg['z_lims'][1] - cfg['z_lims'][0]) / cfg['box_res'][2]) + 1
     model = PosNet(
         encode_block_channels   = [16, 32, 64, 128],
         encode_block_depth      = 3,
@@ -38,7 +41,7 @@ def make_model(device, cfg):
         activation              = 'relu',
         padding_mode            = 'zeros',
         pool_type               = 'avg',
-        decoder_z_sizes         = [5, 15, 40],
+        decoder_z_sizes         = [5, 15, outsize],
         z_outs                  = [3, 3, 5, 10],
         peak_std                = cfg['peak_std']
     ).to(device)
@@ -177,7 +180,7 @@ def run(cfg):
         )
     
     # Setup logging
-    log_file = open(cfg['batch_log_path'], 'a')
+    log_file = open(os.path.join(cfg['run_dir'], 'batches.log'), 'a')
     loss_logger = LossLogPlot(
         log_path=os.path.join(cfg['run_dir'], 'loss_log.csv'),
         plot_path=os.path.join(cfg['run_dir'], 'loss_history.png'),
@@ -400,7 +403,9 @@ if __name__ == '__main__':
     
     # Get config
     cfg = parse_args()
-    with open(os.path.join(cfg['run_dir'], 'config.yaml'), 'w') as f:
+    run_dir = Path(cfg['run_dir'])
+    run_dir.mkdir(exist_ok=True, parents=True)
+    with open(run_dir / 'config.yaml', 'w') as f:
         # Remember settings
         yaml.safe_dump(cfg, f)
 
