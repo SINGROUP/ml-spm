@@ -1,29 +1,29 @@
 
 import os
-import time
-import yaml
 import pickle
 import random
-import numpy as np
-import webdataset as wds
+import time
 from functools import partial
 from pathlib import Path
 
+import numpy as np
 import torch
-from torch import nn, optim
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from torch.nn.parallel import DistributedDataParallel
+import webdataset as wds
+import yaml
+from torch import nn, optim
 from torch.distributed.algorithms.join import Join
+from torch.nn.parallel import DistributedDataParallel
 
-from mlspm import utils
-import mlspm.preprocessing as pp
 import mlspm.data_loading as dl
+import mlspm.preprocessing as pp
+import mlspm.visualization as vis
+from mlspm import graph, utils
+from mlspm.cli import parse_args
 from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.models import PosNet
-from mlspm import graph
-import mlspm.visualization as vis
-from asdafm.parsing_utils           import update_config
+
 
 def make_model(device, cfg):
     model = PosNet(
@@ -77,8 +77,6 @@ def apply_preprocessing(batch, cfg):
     pp.rand_shift_xy_trend(X, max_layer_shift=0.02, max_total_shift=0.04)
     X, mols, box_borders = graph.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
         reflections=True, crop=(128, 128), per_batch_item=True)
-    # X, mols, box_borders = graph.random_crop_graph(X, mols, box_borders, min_crop=0.6,
-    #     max_aspect=1.5, multiple=1)
     pp.add_norm(X)
     pp.add_gradient(X, c=0.3)
     pp.add_noise(X, c=0.1, randomize_amplitude=True, normal_amplitude=True)
@@ -94,7 +92,7 @@ def make_webDataloader(cfg, mode='train'):
     assert mode in ['train', 'val', 'test'], mode
 
     shard_list = dl.ShardList(
-        cfg['urls'][mode],
+        cfg[f'urls_{mode}'],
         base_path=cfg['data_dir'],
         world_size=cfg['world_size'],
         rank=cfg['global_rank'],
@@ -400,13 +398,10 @@ def run(cfg):
 
 if __name__ == '__main__':
     
-    # Read config
-    with open('./config.yaml', 'r') as f:
-        cfg = yaml.safe_load(f)
-    cfg = update_config(cfg)
-    if not os.path.exists(cfg['run_dir']):
-        os.makedirs(cfg['run_dir'])
+    # Get config
+    cfg = parse_args()
     with open(os.path.join(cfg['run_dir'], 'config.yaml'), 'w') as f:
+        # Remember settings
         yaml.safe_dump(cfg, f)
 
     # Set random seeds
