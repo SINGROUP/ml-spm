@@ -21,7 +21,7 @@ import mlspm.preprocessing as pp
 import mlspm.data_loading as dl
 from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.models import PosNet
-import asdafm.graph.graph_utils     as gu
+from mlspm import graph
 import asdafm.visualization         as vis
 from asdafm.parsing_utils           import update_config
 
@@ -66,8 +66,8 @@ def apply_preprocessing(batch, cfg):
     # atoms = [a[a[:, -1] != 29] for a in atoms]
     pp.top_atom_to_zero(atoms)
     xyz = atoms.copy()
-    mols = [gu.MoleculeGraph(a, []) for a in atoms]
-    mols, sw = gu.shift_mols_window(mols, scan_windows[0])
+    mols = [graph.MoleculeGraph(a, []) for a in atoms]
+    mols, sw = graph.shift_mols_window(mols, scan_windows[0])
 
     box_borders = (
         (0, 0, z_lims[0]),
@@ -75,17 +75,17 @@ def apply_preprocessing(batch, cfg):
     )
 
     pp.rand_shift_xy_trend(X, max_layer_shift=0.02, max_total_shift=0.04)
-    X, mols, box_borders = gu.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
+    X, mols, box_borders = graph.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
         reflections=True, crop=(128, 128), per_batch_item=True)
-    # X, mols, box_borders = gu.random_crop_graph(X, mols, box_borders, min_crop=0.6,
+    # X, mols, box_borders = graph.random_crop_graph(X, mols, box_borders, min_crop=0.6,
     #     max_aspect=1.5, multiple=1)
     pp.add_norm(X)
     pp.add_gradient(X, c=0.3)
     pp.add_noise(X, c=0.1, randomize_amplitude=True, normal_amplitude=True)
     pp.add_cutout(X, n_holes=5)
     
-    mols = gu.threshold_atoms_bonds(mols, zmin)
-    ref = gu.make_position_distribution(mols, box_borders, box_res=box_res, std=peak_std)
+    mols = graph.threshold_atoms_bonds(mols, zmin)
+    ref = graph.make_position_distribution(mols, box_borders, box_res=box_res, std=peak_std)
 
     return X, [ref], xyz, box_borders
 

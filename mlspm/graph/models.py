@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..modules import AttentionConvZ, Conv3dBlock, UNetAttentionConv, _get_padding
-from .utils import find_gaussian_peaks
+from . import find_gaussian_peaks
 
 
 def _get_activation(activation):
