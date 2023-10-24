@@ -22,7 +22,7 @@ import mlspm.data_loading as dl
 from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.models import PosNet
 from mlspm import graph
-import asdafm.visualization         as vis
+import mlspm.visualization as vis
 from asdafm.parsing_utils           import update_config
 
 def make_model(device, cfg):
