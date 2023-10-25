@@ -2,10 +2,11 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.colors import Colormap
 
 # Make subpackage plotting tools also available
-from .graph.visualization import *
+from .graph._visualization import *
 from .utils import _calc_plot_dim
 
 
@@ -75,3 +76,36 @@ def make_input_plots(
                 print(f"Input image saved to {save_name}")
 
         img_ind += 1
+
+
+def plot_confusion_matrix(ax: Axes, conf_mat: np.ndarray, tick_labels: Optional[list[str]] = None):
+    """
+    Plot confusion matrix on matplotlib axes.
+
+    Arguments:
+        ax: Axes object on which the confusion matrix is plotted.
+        conf_mat: Confusion matrix counts.
+        tick_labels: Labels for classes.
+    """
+    if tick_labels:
+        assert len(conf_mat) == len(tick_labels)
+    else:
+        tick_labels = [str(i) for i in range(len(conf_mat))]
+
+    conf_mat_norm = np.zeros_like(conf_mat, dtype=np.float64)
+    for i, r in enumerate(conf_mat):
+        conf_mat_norm[i] = r / np.sum(r)
+
+    im = ax.imshow(conf_mat_norm, cmap=cm.Blues)
+    plt.colorbar(im)
+    ax.set_xticks(np.arange(conf_mat.shape[0]))
+    ax.set_yticks(np.arange(conf_mat.shape[1]))
+    ax.set_xlabel("Predicted class")
+    ax.set_ylabel("True class")
+    ax.set_xticklabels(tick_labels)
+    ax.set_yticklabels(tick_labels, rotation="vertical", va="center")
+    for i in range(conf_mat.shape[0]):
+        for j in range(conf_mat.shape[1]):
+            color = "white" if conf_mat_norm[i, j] > 0.5 else "black"
+            label = "{:.3f}".format(conf_mat_norm[i, j]) + "\n(" + "{:d}".format(conf_mat[i, j]) + ")"
+            ax.text(j, i, label, ha="center", va="center", color=color)
