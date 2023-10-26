@@ -11,8 +11,6 @@ import webdataset as wds
 import yaml
 from torch import optim
 
-import sys
-sys.path.append('/home/work/git/ml-spm')
 import mlspm.data_loading as dl
 import mlspm.preprocessing as pp
 import mlspm.visualization as vis

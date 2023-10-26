@@ -16,8 +16,6 @@ from torch import nn, optim
 from torch.distributed.algorithms.join import Join
 from torch.nn.parallel import DistributedDataParallel
 
-import sys
-sys.path.append('/home/work/git/ml-spm')
 import mlspm.data_loading as dl
 import mlspm.preprocessing as pp
 import mlspm.visualization as vis
