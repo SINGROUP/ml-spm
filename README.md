@@ -1,4 +1,12 @@
 # ML-SPM
 Machine learning for scanning probe microscopy
 
-Under construction...
+Create conda environment:
+```
+conda env create -f environment.yml
+```
+
+Installation:
+```
+pip install .
+```
