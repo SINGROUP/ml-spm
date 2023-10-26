@@ -173,10 +173,10 @@ class PosNet(nn.Module):
         Returns: Box start and end coordinates in the form ((x_start, y_start, z_start), (x_end, y_end, z_end)).
         """
         # fmt:off
-        box_borders = np.array(
-            (                            0,                             0, self.grid_z_range[0]),
-            (self.afm_res * (shape[0] - 1), self.afm_res * (shape[1] - 1), self.grid_z_range[1])
-        )  # fmt:on
+        box_borders = np.array([
+            [                            0,                             0, self.grid_z_range[0]],
+            [self.afm_res * (shape[0] - 1), self.afm_res * (shape[1] - 1), self.grid_z_range[1]]
+        ])  # fmt:on
         return box_borders
 
     def forward(self, x: torch.Tensor, return_attention: bool = False) -> torch.Tensor | Tuple[torch.Tensor, list[torch.Tensor]]:
@@ -342,15 +342,15 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         in_channels = self.conv_channels[-1]
         self.att_conv = Conv3dBlock(
             in_channels, in_channels, kernel_size=3, depth=3, padding_mode=self.padding_mode, res_connection=False, last_activation=False
-        ).to(self.device)
+        )
 
         self.node_transform = nn.Linear(conv_channels[-1], node_feature_size)
 
         self.class_net = nn.Sequential(nn.Linear(node_feature_size, node_out_hidden_size), self.act, nn.Linear(node_out_hidden_size, n_classes))
         self.edge_net = nn.Sequential(nn.Linear(node_feature_size, edge_out_hidden_size), self.act, nn.Linear(edge_out_hidden_size, 1), nn.Sigmoid())
 
-        self.to(device)
         self.device = device
+        self.to(device)
 
     def _gather_afm(self, x, pos):
         if sum([len(p) for p in pos]) == 0:
@@ -486,7 +486,7 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         assert x.ndim == 4, "Wrong number of dimensions in AFM tensor. Should be 4."
 
         if pos is None:
-            pos, pos_grid, _ = self.posnet.get_positions(x)
+            pos, _, _ = self.posnet.get_positions(x)
 
         # Gather all AFM image regions to one tensor
         x = self._gather_afm(x, pos)

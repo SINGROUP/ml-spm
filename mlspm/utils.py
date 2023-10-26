@@ -161,7 +161,7 @@ class Checkpointer:
                 os.remove(os.path.join(self.checkpoint_dir, f"model_{self.epoch - 1}.pth"))
             if self.keep_last_epoch or improved:
                 save_checkpoint(self.model, self.optimizer, self.epoch, self.checkpoint_dir, additional_data=self.additional_data)
-            if self.world_size > 0:
+            if self.world_size > 1:
                 dist.broadcast(torch.tensor(self.additional_data["best_loss"], device=self.local_rank, dtype=torch.float), src=0)
                 dist.broadcast(torch.tensor(self.additional_data["best_epoch"], device=self.local_rank, dtype=torch.long), src=0)
         else:

@@ -11,7 +11,7 @@ def collate_graph(
     batch: Tuple[np.ndarray, list[MoleculeGraph], list[np.ndarray]]
 ) -> Tuple[torch.Tensor, list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[MoleculeGraph], list[np.ndarray]]:
     """
-    Collate graph samples into a batch for Pytorch. For use with the EqGraphImgNet.
+    Collate graph samples into a batch.
 
     Arguments:
         batch: tuple (X, mols, xyz), where

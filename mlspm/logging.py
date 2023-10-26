@@ -53,7 +53,7 @@ class SyncedLoss(Joinable):
     def __getitem__(self, index: int):
         return self.losses[index]
 
-    def mean(self) -> np.float64:
+    def mean(self) -> np.ndarray:
         """Get average loss over batches."""
         return np.mean(self.losses, axis=0)
 

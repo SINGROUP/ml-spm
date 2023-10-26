@@ -66,7 +66,7 @@ def apply_preprocessing(batch, cfg):
     z0 = random.choice(range(0, min(5, nz_max+1-nz)))
     X = [x[:, :, :, -nz:] for x in X] if z0 == 0 else [x[:, :, :, -(nz+z0):-z0] for x in X]
 
-    # atoms = [a[a[:, -1] != 29] for a in atoms]
+    atoms = [a[a[:, -1] != 29] for a in atoms]
     pp.top_atom_to_zero(atoms)
     xyz = atoms.copy()
     mols = [graph.MoleculeGraph(a, []) for a in atoms]
@@ -204,18 +204,9 @@ def run(cfg):
         
         for epoch in range(init_epoch, cfg['epochs']+1):
 
-            # # Adjust the zmin value depending on the epoch after the 10th epoch
-            # # Gradual increase from zmin=-1.9 to -2.9 over 30 epochs
-            # if epoch < 10:
-            #     cfg['zmin'] = -1.9
-            # elif 10 < epoch <= 40:
-            #     cfg['zmin'] = -1.9 - (epoch - 10) / 30
-            # else:
-            #     cfg['zmin'] = -2.9
-
             # Create datasets and dataloaders
-            train_set, train_loader = make_webDataloader(cfg, 'train')
-            val_set, val_loader = make_webDataloader(cfg, 'val')
+            _, train_loader = make_webDataloader(cfg, 'train')
+            _, val_loader = make_webDataloader(cfg, 'val')
 
             if cfg['global_rank'] == 0: print(f'\n === Epoch {epoch}')
 
@@ -312,13 +303,13 @@ def run(cfg):
             f'{np.sort(loss_logger.val_losses[:, 0])[:cfg["avg_best_epochs"]].mean()}')
 
     if cfg['test'] or cfg['predict']:
-        test_set, test_loader = make_webDataloader(cfg, 'test')
+        _, test_loader = make_webDataloader(cfg, 'test')
 
     if cfg['test']:
 
         if cfg['global_rank'] == 0: print(f'\n ========= Testing with model from epoch {checkpointer.best_epoch}')
 
-        eval_losses = SyncedLoss(len(loss_logger.loss_labels))
+        eval_losses = SyncedLoss(num_losses=len(cfg['loss_labels']))
         eval_start = time.perf_counter()
         if cfg['timings'] and cfg['global_rank'] == 0:
             t0 = eval_start

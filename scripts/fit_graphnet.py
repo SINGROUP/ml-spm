@@ -7,25 +7,24 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
 import webdataset as wds
 import yaml
 from torch import optim
-from torch.distributed.algorithms.join import Join
-from torch.nn.parallel import DistributedDataParallel
 
+import sys
+sys.path.append('/home/work/git/ml-spm')
 import mlspm.data_loading as dl
 import mlspm.preprocessing as pp
 import mlspm.visualization as vis
 from mlspm import graph, utils
 from mlspm.cli import parse_args
-from mlspm.logging import LossLogPlot
+from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.losses import GraphLoss
 from mlspm.models import GraphImgNet, PosNet
 
 
 def make_model(device, cfg):
+    outsize = round((cfg['z_lims'][1] - cfg['z_lims'][0]) / cfg['box_res'][2]) + 1
     posnet = PosNet(
         encode_block_channels   = [16, 32, 64, 128],
         encode_block_depth      = 3,
@@ -38,7 +37,7 @@ def make_model(device, cfg):
         activation              = 'relu',
         padding_mode            = 'zeros',
         pool_type               = 'avg',
-        decoder_z_sizes         = [5, 15, 40],
+        decoder_z_sizes         = [5, 15, outsize],
         z_outs                  = [3, 3, 5, 10],
         afm_res                 = cfg['box_res'][0],
         grid_z_range            = cfg['z_lims'],
@@ -86,7 +85,7 @@ def apply_preprocessing(batch, cfg):
     z0 = random.choice(range(0, min(5, nz_max+1-nz)))
     X = [x[:, :, :, -nz:] for x in X] if z0 == 0 else [x[:, :, :, -(nz+z0):-z0] for x in X]
 
-    # atoms = [a[a[:, -1] != 29] for a in atoms]
+    atoms = [a[a[:, -1] != 29] for a in atoms]
     atoms = pp.top_atom_to_zero(atoms)
     xyz = atoms.copy()
     bonds = graph.find_bonds(atoms)
@@ -100,7 +99,7 @@ def apply_preprocessing(batch, cfg):
         (box_res[0]*(X[0].shape[1] - 1), box_res[1]*(X[0].shape[2] - 1), z_lims[1])
     )
 
-    pp.rand_shift_xy_trend(X, shift_step_max=0.02, max_shift_total=0.04)
+    pp.rand_shift_xy_trend(X, max_layer_shift=0.02, max_total_shift=0.04)
     X, mols, box_borders = graph.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
         reflections=True, crop=(128, 128), per_batch_item=True)
     pp.add_norm(X)
@@ -117,7 +116,7 @@ def make_webDataloader(cfg, mode='train'):
     assert mode in ['train', 'val', 'test'], mode
 
     shard_list = dl.ShardList(
-        cfg['urls'][mode],
+        cfg[f'urls_{mode}'],
         base_path=cfg['data_dir'],
         world_size=cfg['world_size'],
         rank=cfg['global_rank'],
@@ -155,35 +154,31 @@ def batch_to_device(batch, device):
     edges = [e.to(device) for e in edges]
     return X, pos, node_classes, edges, ref_graphs, xyz
 
-def run(rank, cfg):
+def run(cfg):
 
-    # Initialize the distributed environment.
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12356'
-    dist.init_process_group(cfg['comm_backend'], rank=rank, world_size=cfg['world_size'])
-    cfg['rank'] = rank
-    cfg['global_rank'] = rank
-    cfg['local_rank'] = rank
+    # Running with a single device, so set all ranks to 0
+    cfg['rank'] = 0
+    cfg['global_rank'] = 0
+    cfg['local_rank'] = 0
+
+    device = 'cuda'
 
     start_time = time.perf_counter()
 
     # Create directories
     checkpoint_dir = os.path.join(cfg['run_dir'], 'Checkpoints/')
-    if rank == 0:
-        if not os.path.exists(cfg['run_dir']):
-            os.makedirs(cfg['run_dir'])
-        if not os.path.exists(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
+    if not os.path.exists(cfg['run_dir']):
+        os.makedirs(cfg['run_dir'])
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
     
     # Define model, optimizer, and loss
-    model, criterion, optimizer, lr_decay = make_model(rank, cfg)
+    model, criterion, optimizer, lr_decay = make_model(device, cfg)
     
-    if rank == 0:
-        print(f'World size = {cfg["world_size"]}')
-        print(f'Trainable parameters: {utils.count_parameters(model)}')
+    print(f'World size = {cfg["world_size"]}')
+    print(f'Trainable parameters: {utils.count_parameters(model)}')
 
     # Setup checkpointing and load a checkpoint if available
-    dist.barrier()
     checkpointer = utils.Checkpointer(model, optimizer, additional_data={'lr_params': lr_decay},
         checkpoint_dir=checkpoint_dir, keep_last_epoch=True)
     init_epoch = checkpointer.epoch
@@ -194,11 +189,11 @@ def run(rank, cfg):
             model,
             optimizer,
             pretrained_weights,
-            additional_data={'lr_params': lr_decay},
-            rank=cfg['local_rank']
+            additional_data={'lr_params': lr_decay}
         )
     
     # Setup logging
+    log_file = open(os.path.join(cfg['run_dir'], 'batches.log'), 'a')
     loss_logger = LossLogPlot(
         log_path=os.path.join(cfg['run_dir'], 'loss_log.csv'),
         plot_path=os.path.join(cfg['run_dir'], 'loss_history.png'),
@@ -206,130 +201,121 @@ def run(rank, cfg):
         loss_weights=cfg['loss_weights'],
         print_interval=cfg['print_interval'],
         init_epoch=init_epoch,
-        stream=open(cfg['batch_log_path'], 'a')
+        stream=log_file
     )
-
-    # Wrap model in DistributedDataParallel.
-    model = DistributedDataParallel(model, device_ids=[rank], find_unused_parameters=False)
     
     if cfg['train']:
 
         # Create datasets and dataloaders
-        train_set, train_loader = make_webDataloader(cfg, 'train')
-        val_set, val_loader = make_webDataloader(cfg, 'val')
+        _, train_loader = make_webDataloader(cfg, 'train')
+        _, val_loader = make_webDataloader(cfg, 'val')
 
-        if rank == 0:
-            if init_epoch <= cfg['epochs']:
-                print(f'\n ========= Starting training from epoch {init_epoch}')
-            else:
-                print('Model already trained')
+        if init_epoch <= cfg['epochs']:
+            print(f'\n ========= Starting training from epoch {init_epoch}')
+        else:
+            print('Model already trained')
         
         for epoch in range(init_epoch, cfg['epochs']+1):
 
-            if rank == 0: print(f'\n === Epoch {epoch}')
+            print(f'\n === Epoch {epoch}')
 
             # Train
-            if cfg['timings'] and rank == 0: t0 = time.perf_counter()
+            if cfg['timings']:
+                t0 = time.perf_counter()
 
             model.train()
-            with Join([model, loss_logger.get_joinable('train')]):
-                for ib, batch in enumerate(train_loader):
+            for ib, batch in enumerate(train_loader):
 
+                # Transfer batch to device
+                X, pos, node_classes_ref, edges_ref, _, _ = batch_to_device(batch, device)
+
+                if cfg['timings']:
+                    torch.cuda.synchronize()
+                    t1 = time.perf_counter()
+                
+                # Forward
+                pred = model(X, pos)
+                losses = criterion(pred, (node_classes_ref, edges_ref), separate_loss_factors=True)
+                loss = losses[0]
+                
+                if cfg['timings']: 
+                    torch.cuda.synchronize()
+                    t2 = time.perf_counter()
+                
+                # Backward
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                lr_decay.step()
+
+                # Log losses
+                loss_logger.add_train_loss(losses)
+
+                if cfg['timings']:
+                    torch.cuda.synchronize()
+                    t3 = time.perf_counter()
+                    print(f'(Train) Load Batch/Forward/Backward: {t1-t0:6f}/{t2-t1:6f}/{t3-t2:6f}')
+                    t0 = t3
+
+            # Validate
+            val_start = time.perf_counter()
+            if cfg['timings']: t0 = val_start
+            
+            model.eval()
+            with torch.no_grad():
+                
+                for ib, batch in enumerate(val_loader):
+                    
                     # Transfer batch to device
-                    X, pos, node_classes_ref, edges_ref, _, _ = batch_to_device(batch, rank)
-
-                    if cfg['timings'] and rank == 0:
+                    X, pos, node_classes_ref, edges_ref, _, _ = batch_to_device(batch, device)
+                    
+                    if cfg['timings']: 
                         torch.cuda.synchronize()
                         t1 = time.perf_counter()
                     
                     # Forward
                     pred = model(X, pos)
                     losses = criterion(pred, (node_classes_ref, edges_ref), separate_loss_factors=True)
-                    loss = losses[0]
+
+                    loss_logger.add_val_loss(losses)
                     
-                    if cfg['timings'] and rank == 0: 
+                    if cfg['timings']:
                         torch.cuda.synchronize()
                         t2 = time.perf_counter()
-                    
-                    # Backward
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                    lr_decay.step()
-
-                    # Log losses
-                    loss_logger.add_train_loss(losses)
-
-                    if cfg['timings'] and rank == 0:
-                        torch.cuda.synchronize()
-                        t3 = time.perf_counter()
-                        print(f'(Train) Load Batch/Forward/Backward: {t1-t0:6f}/{t2-t1:6f}/{t3-t2:6f}')
-                        t0 = t3
-
-            # Validate
-            if rank == 0:
-                val_start = time.perf_counter()
-                if cfg['timings']: t0 = val_start
-            
-            model.eval()
-            with Join([model, loss_logger.get_joinable('val')]):
-                with torch.no_grad():
-                    
-                    for ib, batch in enumerate(val_loader):
-                        
-                        # Transfer batch to device
-                        X, pos, node_classes_ref, edges_ref, _, _ = batch_to_device(batch, rank)
-                        
-                        if cfg['timings']: 
-                            torch.cuda.synchronize()
-                            t1 = time.perf_counter()
-                        
-                        # Forward
-                        pred = model(X, pos)
-                        losses = criterion(pred, (node_classes_ref, edges_ref), separate_loss_factors=True)
-
-                        loss_logger.add_val_loss(losses)
-                        
-                        if cfg['timings'] and rank == 0:
-                            torch.cuda.synchronize()
-                            t2 = time.perf_counter()
-                            print(f'(Val) Load Batch/Forward: {t1-t0:6f}/{t2-t1:6f}')
-                            t0 = t2
+                        print(f'(Val) Load Batch/Forward: {t1-t0:6f}/{t2-t1:6f}')
+                        t0 = t2
 
             # Write average losses to log and report to terminal
             loss_logger.next_epoch()
 
             # Save checkpoint
-            if rank == 0: checkpointer.next_epoch(loss_logger.val_losses[-1][0])
+            checkpointer.next_epoch(loss_logger.val_losses[-1][0])
             
     # Return to best epoch
-    dist.barrier()
     checkpointer.revert_to_best_epoch()
 
     # Load pretrained weights for Posnet from a separate file
-    posnet_weights = torch.load(os.path.join(cfg['run_dir'], 'posnet.pth'))
-    model.module.posnet.load_state_dict(posnet_weights)
+    posnet_weights = torch.load(cfg['posnet_path'])
+    model.posnet.load_state_dict(posnet_weights)
 
     # Save final best model weights
-    if rank == 0:
-        torch.save(model.module.state_dict(), save_path := os.path.join(cfg['run_dir'], 'best_model.pth'))
-        print(f'\nModel saved to {save_path}')
+    torch.save(model.state_dict(), save_path := os.path.join(cfg['run_dir'], 'best_model.pth'))
+    print(f'\nModel saved to {save_path}')
 
     print(f'Best validation loss on epoch {checkpointer.best_epoch}: {checkpointer.best_loss}')
     print(f'Average of best {cfg["avg_best_epochs"]} validation losses: '
         f'{np.sort(loss_logger.val_losses[:, 0])[:cfg["avg_best_epochs"]].mean()}')
 
     if cfg['test'] or cfg['predict']:
-        test_set, test_loader = make_webDataloader(cfg, 'test')
-        model = model.module
+        _, test_loader = make_webDataloader(cfg, 'test')
 
-    if cfg['test'] and rank == 0:
+    if cfg['test']:
 
         print(f'\n ========= Testing with model from epoch {checkpointer.best_epoch}')
 
         stats_ref_pos = graph.GraphStats(cfg['classes'])
         stats_pred_pos = graph.GraphStats(cfg['classes'])
-        eval_losses = []
+        eval_losses = SyncedLoss(num_losses=len(cfg['loss_labels']))
         eval_start = time.perf_counter()
         if cfg['timings']: t0 = eval_start
         
@@ -339,7 +325,7 @@ def run(rank, cfg):
             for ib, batch in enumerate(test_loader):
                 
                 # Transfer batch to device
-                X, pos, node_classes_ref, edges_ref, ref_graphs, _ = batch_to_device(batch, rank)
+                X, pos, node_classes_ref, edges_ref, ref_graphs, _ = batch_to_device(batch, device)
                 
                 if cfg['timings']:
                     torch.cuda.synchronize()
@@ -348,7 +334,7 @@ def run(rank, cfg):
                 # Forward
                 pred = model(X, pos)
                 losses = criterion(pred, (node_classes_ref, edges_ref), separate_loss_factors=True)
-                eval_losses.append([loss.item() for loss in losses])
+                eval_losses.append(losses)
 
                 if cfg['timings']:
                     torch.cuda.synchronize()
@@ -377,14 +363,14 @@ def run(rank, cfg):
         stats_pred_pos.report(stats_dir2)
 
         # Average losses and print
-        eval_loss = np.mean(eval_losses, axis=0)
+        eval_loss = eval_losses.mean()
         print(f'Test set loss: {loss_logger.loss_str(eval_loss)}')
 
         # Save test set loss to file
         with open(os.path.join(cfg['run_dir'], 'test_loss.txt'),'w') as f:
             f.write(';'.join([str(l) for l in eval_loss]))
 
-    if cfg['predict'] and rank == 0:
+    if cfg['predict']:
     
         # Make predictions
         print(f'\n ========= Predict on {cfg["pred_batches"]} batches from the test set')
@@ -399,7 +385,7 @@ def run(rank, cfg):
                 if ib >= cfg['pred_batches']: break
                 
                 # Transfer batch to device
-                X, pos, node_classes_ref, edges_ref, ref_graphs, xyz = batch_to_device(batch, rank)
+                X, pos, node_classes_ref, edges_ref, ref_graphs, xyz = batch_to_device(batch, device)
                 
                 # Forward
                 pred = model(X, pos)
@@ -438,11 +424,9 @@ def run(rank, cfg):
 
                 counter += len(X)
 
-    print(f'Done at rank {rank}. Total time: {time.perf_counter() - start_time:.0f}s')
+    print(f'Done. Total time: {time.perf_counter() - start_time:.0f}s')
 
-    dist.barrier()
-    dist.destroy_process_group()
-
+    log_file.close()
 
 if __name__ == '__main__':
     
@@ -460,7 +444,6 @@ if __name__ == '__main__':
     np.random.seed(cfg['random_seed'])
 
     # Start run
-    mp.set_start_method('spawn')
-    world_size = torch.cuda.device_count()
-    cfg['world_size'] = world_size
-    mp.spawn(run, args=(cfg,), nprocs=world_size, join=True)
+    cfg['world_size'] = 1
+    cfg['posnet_path'] = './posnet.pth'
+    run(cfg)

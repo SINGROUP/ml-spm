@@ -13,7 +13,7 @@ torchrun \
         --train True \
         --test True \
         --predict True \
-        --epochs 10 \
+        --epochs 1 \
         --num_workers 2 \
         --batch_size 2 \
         --avg_best_epochs 5 \
@@ -23,6 +23,7 @@ torchrun \
         --z_lims -1.4 0.5 \
         --peak_std 0.20 \
         --box_res 0.125 0.125 0.100 \
+        --loss_labels "MSE (pos.)" \
         --data_dir /mnt/triton_project/AFM_Hartree_DB/AFM_sims/striped/Xylose-Cu111 \
         --urls_train "Xylose-K-{1..2}_train_{0..1}.tar" \
         --urls_val "Xylose-K-{1..1}_val_{0..3}.tar" \
