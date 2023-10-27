@@ -55,6 +55,7 @@ class PosNet(nn.Module):
         peak_std: Standard deviation of atom position grid peaks in angstroms.
         match_threshold: Detection threshold for matching when finding atom position peaks.
         match_method: Method for template matching when finding atom position peaks. See .utils.find_gaussian_peaks for options.
+        device: Device to store model on.
     """
 
     def __init__(
@@ -78,6 +79,7 @@ class PosNet(nn.Module):
         peak_std: float = 0.3,
         match_threshold: float = 0.7,
         match_method: str = "msd_norm",
+        device: str = 'cuda'
     ):
         super().__init__()
 
@@ -187,6 +189,9 @@ class PosNet(nn.Module):
                 for c, z_out in zip(reversed(enc_channels[:-1]), z_outs[1:])
             ]
         )
+
+        self.device = device
+        self.to(device)
 
     def forward(self, x: torch.Tensor, return_attention: bool = False) -> torch.Tensor | Tuple[torch.Tensor, list[torch.Tensor]]:
         xs = []

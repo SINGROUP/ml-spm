@@ -282,7 +282,7 @@ def run(cfg):
 
         print(f'\n ========= Testing with model from epoch {checkpointer.best_epoch}')
 
-        stats_ref_pos = graph.GraphStats(cfg['classes'])
+        stats = graph.GraphStats(cfg['classes'])
         eval_losses = SyncedLoss(num_losses=len(cfg['loss_labels']))
         eval_start = time.perf_counter()
         if cfg['timings']: t0 = eval_start
@@ -310,7 +310,7 @@ def run(cfg):
 
                 # Gather statistical information
                 pred_graphs = model.pred_to_graph(pos, *pred, bond_threshold=0.5)
-                stats_ref_pos.add_batch(pred_graphs, ref_graphs)
+                stats.add_batch(pred_graphs, ref_graphs)
 
                 if (ib+1) % cfg['print_interval'] == 0: print(f'Test Batch {ib+1}')
                 
@@ -322,8 +322,8 @@ def run(cfg):
 
         # Save statistical information
         stats_dir = os.path.join(cfg['run_dir'], 'stats')
-        stats_ref_pos.plot(stats_dir)
-        stats_ref_pos.report(stats_dir)
+        stats.plot(stats_dir)
+        stats.report(stats_dir)
 
         # Average losses and print
         eval_loss = eval_losses.mean()

@@ -3,7 +3,7 @@
 export OMP_NUM_THREADS=1
 
 python fit_graphnet.py \
-    --run_dir ./test_graphnet \
+    --run_dir ./fit_graphnet \
     --random_seed 0 \
     --train True \
     --test True \
@@ -14,8 +14,8 @@ python fit_graphnet.py \
     --avg_best_epochs 5 \
     --pred_batches 20 \
     --lr 1e-3 \
-    --zmin -1.0 \
-    --z_lims -1.4 0.5 \
+    --zmin -2.9 \
+    --z_lims -3.4 0.5 \
     --peak_std 0.20 \
     --box_res 0.125 0.125 0.100 \
     --classes 1 6,14 7,15 8,16 9,17,35 \

@@ -8,19 +8,19 @@ torchrun \
     --nproc_per_node 1 \
     --max_restarts 0 \
     fit_posnet.py \
-        --run_dir ./test_posnet \
+        --run_dir ./fit_posnet \
         --random_seed 0 \
         --train True \
         --test True \
         --predict True \
-        --epochs 1 \
+        --epochs 6 \
         --num_workers 2 \
         --batch_size 2 \
         --avg_best_epochs 5 \
         --pred_batches 20 \
         --lr 1e-3 \
-        --zmin -1.0 \
-        --z_lims -1.4 0.5 \
+        --zmin -2.9 \
+        --z_lims -3.4 0.5 \
         --peak_std 0.20 \
         --box_res 0.125 0.125 0.100 \
         --loss_labels "MSE (pos.)" \
