@@ -8,7 +8,7 @@ python fit_graphnet.py \
     --train True \
     --test True \
     --predict True \
-    --epochs 10 \
+    --epochs 20 \
     --num_workers 2 \
     --batch_size 2 \
     --avg_best_epochs 5 \

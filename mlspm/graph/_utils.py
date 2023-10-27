@@ -379,8 +379,15 @@ def crop_graph(X, mols, start, size, box_borders, new_start=(0.0, 0.0)):
 
     return X, mols, box_borders_cropped
 
-def save_graphs_to_xyzs(molecules: list[MoleculeGraph], classes: list[list[int | str]], outfile_format: str='./{ind}_graph.xyz', start_ind: int=0, verbose: int=1):
-    '''
+
+def save_graphs_to_xyzs(
+    molecules: list[MoleculeGraph],
+    classes: list[list[int | str]],
+    outfile_format: str = "./{ind}_graph.xyz",
+    start_ind: int = 0,
+    verbose: int = 1,
+):
+    """
     Save molecule graphs to xyz files.
 
     Arguments:
@@ -389,11 +396,10 @@ def save_graphs_to_xyzs(molecules: list[MoleculeGraph], classes: list[list[int |
         outfile_format: Formatting string for saved files. Sample index is available in variable "ind".
         start_ind: Index where file numbering starts.
         verbose: Whether to print output information.
-    '''
+    """
 
     ind = start_ind
     for mol in molecules:
-
         outfile = outfile_format.format(ind=ind)
         outdir = os.path.dirname(outfile)
         if not os.path.exists(outdir):
@@ -404,8 +410,27 @@ def save_graphs_to_xyzs(molecules: list[MoleculeGraph], classes: list[list[int |
             mol_elements = np.array([classes[int(m)][0] for m in mol.array(class_index=True).squeeze(1)])[:, None]
             mol_arr = np.append(mol_xyz, mol_elements, axis=1)
         else:
-            mol_arr = np.empty((0,4))
+            mol_arr = np.empty((0, 4))
 
         write_to_xyz(mol_arr, outfile, verbose=verbose)
 
         ind += 1
+
+
+def make_box_borders(shape: Tuple[int, int], res: Tuple[float, float], z_range: Tuple[float, float]) -> np.ndarray:
+    """
+    Make grid box borders for a given grid xy shape.
+
+    Arguments:
+        shape: Grid xy shape.
+        res: Grid xy pixel resolution in Ånströms.
+        z_range: Grid z start and end coordinates in Ånströms.
+
+    Returns: Box start and end coordinates in the form ((x_start, y_start, z_start), (x_end, y_end, z_end)).
+    """
+    # fmt:off
+    box_borders = np.array([
+        [                      0,                       0, z_range[0]],
+        [res[0] * (shape[0] - 1), res[1] * (shape[1] - 1), z_range[1]]
+    ])  # fmt:on
+    return box_borders

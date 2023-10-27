@@ -18,31 +18,11 @@ from mlspm import graph, utils
 from mlspm.cli import parse_args
 from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.losses import GraphLoss
-from mlspm.models import GraphImgNet, PosNet
+from mlspm.models import GraphImgNet
 
 
 def make_model(device, cfg):
-    outsize = round((cfg['z_lims'][1] - cfg['z_lims'][0]) / cfg['box_res'][2]) + 1
-    posnet = PosNet(
-        encode_block_channels   = [16, 32, 64, 128],
-        encode_block_depth      = 3,
-        decode_block_channels   = [128, 64, 32],
-        decode_block_depth      = 2,
-        decode_block_channels2  = [128, 64, 32],
-        decode_block_depth2     = 3,
-        attention_channels      = [128, 128, 128],
-        res_connections         = True,
-        activation              = 'relu',
-        padding_mode            = 'zeros',
-        pool_type               = 'avg',
-        decoder_z_sizes         = [5, 15, outsize],
-        z_outs                  = [3, 3, 5, 10],
-        afm_res                 = cfg['box_res'][0],
-        grid_z_range            = cfg['z_lims'],
-        peak_std                = cfg['peak_std']
-    ).to(device)
     model = GraphImgNet(
-        posnet,
         n_classes               = len(cfg['classes']),
         iters                   = 5,
         node_feature_size       = 40,
@@ -50,6 +30,7 @@ def make_model(device, cfg):
         message_hidden_size     = 196,
         edge_cutoff             = cfg['edge_cutoff'],
         afm_cutoff              = cfg['afm_cutoff'],
+        afm_res                 = cfg['box_res'][0],
         conv_channels           = [12, 24, 48],
         conv_depth              = 2,
         node_out_hidden_size    = 196,
@@ -60,8 +41,6 @@ def make_model(device, cfg):
         pool_type               = 'avg',
         device                  = device
     )
-    for param in model.posnet.parameters():
-        param.requires_grad = False
     criterion = GraphLoss(*cfg['loss_weights'])
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=cfg['lr'])
     lr_decay_rate = 1e-5
@@ -92,12 +71,8 @@ def apply_preprocessing(batch, cfg):
     mols = [m.randomize_positions(sigma=[0.08, 0.08, 0.08]) for m in mols]
     mols, sw = graph.shift_mols_window(mols, scan_windows[0])
 
-    box_borders = (
-        (0, 0, z_lims[0]),
-        (box_res[0]*(X[0].shape[1] - 1), box_res[1]*(X[0].shape[2] - 1), z_lims[1])
-    )
-
     pp.rand_shift_xy_trend(X, max_layer_shift=0.02, max_total_shift=0.04)
+    box_borders = graph.make_box_borders(X[0].shape[1:3], box_res[:2], z_lims)
     X, mols, box_borders = graph.add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1,
         reflections=True, crop=(128, 128), per_batch_item=True)
     pp.add_norm(X)
@@ -292,10 +267,6 @@ def run(cfg):
     # Return to best epoch
     checkpointer.revert_to_best_epoch()
 
-    # Load pretrained weights for Posnet from a separate file
-    posnet_weights = torch.load(cfg['posnet_path'])
-    model.posnet.load_state_dict(posnet_weights)
-
     # Save final best model weights
     torch.save(model.state_dict(), save_path := os.path.join(cfg['run_dir'], 'best_model.pth'))
     print(f'\nModel saved to {save_path}')
@@ -312,7 +283,6 @@ def run(cfg):
         print(f'\n ========= Testing with model from epoch {checkpointer.best_epoch}')
 
         stats_ref_pos = graph.GraphStats(cfg['classes'])
-        stats_pred_pos = graph.GraphStats(cfg['classes'])
         eval_losses = SyncedLoss(num_losses=len(cfg['loss_labels']))
         eval_start = time.perf_counter()
         if cfg['timings']: t0 = eval_start
@@ -339,10 +309,8 @@ def run(cfg):
                     t2 = time.perf_counter()
 
                 # Gather statistical information
-                pred_graphs_ref_pos = model.pred_to_graph(pos, *pred, bond_threshold=0.5)
-                pred_graphs_pred_pos = model.predict_graph(X, bond_threshold=0.5)
-                stats_ref_pos.add_batch(pred_graphs_ref_pos, ref_graphs)
-                stats_pred_pos.add_batch(pred_graphs_pred_pos, ref_graphs)
+                pred_graphs = model.pred_to_graph(pos, *pred, bond_threshold=0.5)
+                stats_ref_pos.add_batch(pred_graphs, ref_graphs)
 
                 if (ib+1) % cfg['print_interval'] == 0: print(f'Test Batch {ib+1}')
                 
@@ -353,12 +321,9 @@ def run(cfg):
                     t0 = t3
 
         # Save statistical information
-        stats_dir1 = os.path.join(cfg['run_dir'], 'stats_ref_pos')
-        stats_dir2 = os.path.join(cfg['run_dir'], 'stats_pred_pos')
-        stats_ref_pos.plot(stats_dir1)
-        stats_ref_pos.report(stats_dir1)
-        stats_pred_pos.plot(stats_dir2)
-        stats_pred_pos.report(stats_dir2)
+        stats_dir = os.path.join(cfg['run_dir'], 'stats')
+        stats_ref_pos.plot(stats_dir)
+        stats_ref_pos.report(stats_dir)
 
         # Average losses and print
         eval_loss = eval_losses.mean()
@@ -373,8 +338,7 @@ def run(cfg):
         # Make predictions
         print(f'\n ========= Predict on {cfg["pred_batches"]} batches from the test set')
         counter = 0
-        pred_dir1 = os.path.join(cfg['run_dir'], 'predictions_ref_pos/')
-        pred_dir2 = os.path.join(cfg['run_dir'], 'predictions_pred_pos/')
+        pred_dir = os.path.join(cfg['run_dir'], 'predictions/')
         
         with torch.no_grad():
             
@@ -383,42 +347,42 @@ def run(cfg):
                 if ib >= cfg['pred_batches']: break
                 
                 # Transfer batch to device
-                X, pos, node_classes_ref, edges_ref, ref_graphs, xyz = batch_to_device(batch, device)
+                X, pos, _, _, ref_graphs, xyz = batch_to_device(batch, device)
                 
                 # Forward
                 pred = model(X, pos)
-                losses = criterion(pred, (node_classes_ref, edges_ref), separate_loss_factors=True)
-                pred_graphs_ref_pos = model.pred_to_graph(pos, *pred, bond_threshold=0.5)
-                pred_graphs_pred_pos, grid_pred = model.predict_graph(X, bond_threshold=0.5, return_grid=True)
-                grid_pred = grid_pred.cpu().numpy()
+                pred_graphs = model.pred_to_graph(pos, *pred, bond_threshold=0.5)
 
                 # Save xyzs
-                utils.batch_write_xyzs(xyz, outdir=pred_dir1, start_ind=counter)
-                graph.save_graphs_to_xyzs(pred_graphs_ref_pos, cfg['classes'],
-                    outfile_format=os.path.join(pred_dir1, '{ind}_graph_pred.xyz'), start_ind=counter)
-                graph.save_graphs_to_xyzs(ref_graphs, cfg['classes'], 
-                    outfile_format=os.path.join(pred_dir1, '{ind}_graph_ref.xyz'), start_ind=counter)
-                utils.batch_write_xyzs(xyz, outdir=pred_dir2, start_ind=counter)
-                graph.save_graphs_to_xyzs(pred_graphs_pred_pos, cfg['classes'],
-                    outfile_format=os.path.join(pred_dir2, '{ind}_graph_pred.xyz'), start_ind=counter)
-                graph.save_graphs_to_xyzs(ref_graphs, cfg['classes'], 
-                    outfile_format=os.path.join(pred_dir2, '{ind}_graph_ref.xyz'), start_ind=counter)
+                utils.batch_write_xyzs(xyz, outdir=pred_dir, start_ind=counter)
+                graph.save_graphs_to_xyzs(
+                    pred_graphs,
+                    cfg['classes'],
+                    outfile_format=os.path.join(pred_dir, '{ind}_graph_pred.xyz'),
+                    start_ind=counter
+                )
+                graph.save_graphs_to_xyzs(
+                    ref_graphs,
+                    cfg['classes'], 
+                    outfile_format=os.path.join(pred_dir, '{ind}_graph_ref.xyz'),
+                    start_ind=counter
+                )
             
                 # Visualize predictions
-                box_borders = model.posnet.make_box_borders(X.shape[1:3])
-                grid_ref = graph.make_position_distribution(ref_graphs, box_borders, box_res=cfg['box_res'],
-                    std = cfg['peak_std'])
-                vis.plot_graphs(pred_graphs_ref_pos, ref_graphs, box_borders=box_borders,
-                    outdir=pred_dir1, start_ind=counter, classes=cfg['classes'], class_colors=cfg['class_colors'])
-                vis.plot_graphs(pred_graphs_pred_pos, ref_graphs, box_borders=box_borders,
-                    outdir=pred_dir2, start_ind=counter, classes=cfg['classes'], class_colors=cfg['class_colors'])
-                vis.plot_distribution_grid(grid_pred, grid_ref, box_borders=box_borders, outdir=pred_dir2,
-                    start_ind=counter)
+                box_borders = graph.make_box_borders(X.shape[1:3], cfg['box_res'][:2], cfg['z_lims'])
+                vis.plot_graphs(
+                    pred_graphs,
+                    ref_graphs,
+                    box_borders=box_borders,
+                    outdir=pred_dir,
+                    start_ind=counter,
+                    classes=cfg['classes'],
+                    class_colors=cfg['class_colors']
+                )
 
                 # Plot input AFM images
                 X = X.cpu().numpy()
-                vis.make_input_plots([X], outdir=pred_dir1, start_ind=counter)
-                vis.make_input_plots([X], outdir=pred_dir2, start_ind=counter)
+                vis.make_input_plots([X], outdir=pred_dir, start_ind=counter)
 
                 counter += len(X)
 
@@ -443,5 +407,4 @@ if __name__ == '__main__':
 
     # Start run
     cfg['world_size'] = 1
-    cfg['posnet_path'] = './posnet.pth'
     run(cfg)

@@ -37,3 +37,6 @@ find = {namespaces = false}
 
 [tool.setuptools.dynamic]
 version = {attr = "mlspm.__version__"}
+
+[tool.black]
+line-length = 135
