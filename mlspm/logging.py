@@ -266,7 +266,7 @@ class LossLogPlot:
         synced_loss = self._synced_losses[mode]
         losses = synced_loss.append(losses)
         if len(losses) != len(self.loss_labels):
-            raise ValueError(f"Length of losses ({len(losses)}) does not match with number of " f"loss labels ({len(self.loss_labels)}).")
+            raise ValueError(f"Length of losses ({len(losses)}) does not match with number of loss labels ({len(self.loss_labels)}).")
         if self.global_rank == 0 and len(synced_loss) % self.print_interval == 0:
             self._print_losses(mode)
 
@@ -278,9 +278,9 @@ class LossLogPlot:
         print(f"Epoch {self.epoch}, {mode} batch {len(synced_loss)} - Loss: " + self.loss_str(losses), file=self.stream, flush=True)
 
     def loss_str(self, losses: list[float] | np.ndarray | torch.Tensor):
-        """Get pretty string for loss values."""
+        """Get a pretty string for loss values."""
         if len(losses) != len(self.loss_labels):
-            raise ValueError(f"Length of losses ({len(losses)}) does not match with number of " f"loss labels ({len(self.loss_labels)}).")
+            raise ValueError(f"Length of losses ({len(losses)}) does not match with number of loss labels ({len(self.loss_labels)}).")
         if len(self.loss_labels) == 1:
             msg = f"{self.loss_labels[0]}: {losses[0]:.6f}"
         else:

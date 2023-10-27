@@ -373,9 +373,19 @@ class GraphStats:  # TODO docstrings
         with open(os.path.join(outdir, "binned_seq_stats.csv"), "w") as f:
             f.write("," + ",".join([str((i + 1) * self.bin_size) for i in range(self.n_bins)]) + "\n")
             f.write("Number of samples," + ",".join([str(len(self.graph_sizes(b))) for b in range(self.n_bins)]) + "\n")
-            f.write("Mean absolute node diff," + ",".join([str(np.abs(self.node_count_diffs(b)).mean()) for b in range(self.n_bins)]) + "\n")
-            f.write("Mean absolute bond diff," + ",".join([str(np.abs(self.bond_count_diffs(b)).mean()) for b in range(self.n_bins)]) + "\n")
-            f.write("Mean Hausdorff distance," + ",".join([str(self.hausdorff_distances(b).mean()) for b in range(self.n_bins)]) + "\n")
+            f.write(
+                "Mean absolute node diff,"
+                + ",".join([str(np.abs(self.node_count_diffs(b)).mean()) for b in range(self.n_bins)])
+                + "\n"
+            )
+            f.write(
+                "Mean absolute bond diff,"
+                + ",".join([str(np.abs(self.bond_count_diffs(b)).mean()) for b in range(self.n_bins)])
+                + "\n"
+            )
+            f.write(
+                "Mean Hausdorff distance," + ",".join([str(self.hausdorff_distances(b).mean()) for b in range(self.n_bins)]) + "\n"
+            )
             f.write("Mean matching distance," + ",".join([str(self.matching_distances(b).mean()) for b in range(self.n_bins)]) + "\n")
             f.write("Missing atoms (mean)," + ",".join([str(self.missing_nodes(b).mean()) for b in range(self.n_bins)]) + "\n")
             f.write("Missing atoms (std)," + ",".join([str(self.missing_nodes(b).std()) for b in range(self.n_bins)]) + "\n")
@@ -383,7 +393,9 @@ class GraphStats:  # TODO docstrings
             f.write("Extra atoms (std)," + ",".join([str(self.extra_nodes(b).std()) for b in range(self.n_bins)]))
 
         # Binned node precision and recall
-        with open(os.path.join(outdir, "binned_node_recall.csv"), "w") as f1, open(os.path.join(outdir, "binned_node_precision.csv"), "w") as f2:
+        with open(os.path.join(outdir, "binned_node_recall.csv"), "w") as f1, open(
+            os.path.join(outdir, "binned_node_precision.csv"), "w"
+        ) as f2:
             f1.write("Ref class," + ",".join([str((i + 1) * self.bin_size) for i in range(self.n_bins)]) + "\n")
             f2.write("Ref class," + ",".join([str((i + 1) * self.bin_size) for i in range(self.n_bins)]) + "\n")
             for c in range(self.n_classes):
@@ -400,7 +412,9 @@ class GraphStats:  # TODO docstrings
                         f2.write("\n")
 
         # Binned edge precision and recall
-        with open(os.path.join(outdir, "binned_edge_recall.csv"), "w") as f1, open(os.path.join(outdir, "binned_edge_precision.csv"), "w") as f2:
+        with open(os.path.join(outdir, "binned_edge_recall.csv"), "w") as f1, open(
+            os.path.join(outdir, "binned_edge_precision.csv"), "w"
+        ) as f2:
             f1.write("Ref class," + ",".join([str((i + 1) * self.bin_size) for i in range(self.n_bins)]) + "\n")
             f2.write("Ref class," + ",".join([str((i + 1) * self.bin_size) for i in range(self.n_bins)]) + "\n")
             for c, label in enumerate(["No edge", "Edge"]):

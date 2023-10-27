@@ -79,7 +79,7 @@ class PosNet(nn.Module):
         peak_std: float = 0.3,
         match_threshold: float = 0.7,
         match_method: str = "msd_norm",
-        device: str = 'cuda'
+        device: str = "cuda",
     ):
         super().__init__()
 

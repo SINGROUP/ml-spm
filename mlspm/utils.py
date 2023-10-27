@@ -64,12 +64,14 @@ elements = [
     "Xe",
 ]
 
+
 def _calc_plot_dim(n, f=0.3):
     rows = max(int(np.sqrt(n) - f), 1)
     cols = 1
-    while rows*cols < n:
+    while rows * cols < n:
         cols += 1
     return rows, cols
+
 
 def _get_distributed():
     try:

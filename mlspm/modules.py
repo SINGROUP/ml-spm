@@ -50,7 +50,9 @@ class _ConvNdBlock(nn.Module):
             self.acts = [self.act] * (depth - 1) + [self._identity]
 
         padding = _get_padding(kernel_size, nd)
-        self.convs = nn.ModuleList([conv(in_channels, out_channels, kernel_size=kernel_size, padding=padding, padding_mode=padding_mode)])
+        self.convs = nn.ModuleList(
+            [conv(in_channels, out_channels, kernel_size=kernel_size, padding=padding, padding_mode=padding_mode)]
+        )
         for _ in range(depth - 1):
             self.convs.append(conv(out_channels, out_channels, kernel_size=kernel_size, padding=padding, padding_mode=padding_mode))
         if res_connection and in_channels != out_channels:
@@ -225,7 +227,14 @@ class AttentionConvZ(nn.Module):
         padding_mode: Type of padding in convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
     """
 
-    def __init__(self, in_channels: int, z_out: int, kernel_size: int | Tuple[int, int, int] = 3, conv_depth: int = 2, padding_mode: str = "zeros"):
+    def __init__(
+        self,
+        in_channels: int,
+        z_out: int,
+        kernel_size: int | Tuple[int, int, int] = 3,
+        conv_depth: int = 2,
+        padding_mode: str = "zeros",
+    ):
         super().__init__()
         self.convs = nn.ModuleList(
             [

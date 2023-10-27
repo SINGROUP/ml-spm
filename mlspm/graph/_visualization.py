@@ -11,7 +11,7 @@ from . import MoleculeGraph
 CLASS_COLORS = "rkbgcmy"
 
 
-def plot_graphs( #TODO docstring
+def plot_graphs(  # TODO docstring
     pred: Optional[list[MoleculeGraph]] = None,
     ref: Optional[list[MoleculeGraph]] = None,
     box_borders: np.ndarray = np.array(((0, 0, -1.4), (16, 16, 0.5))),
@@ -235,10 +235,26 @@ def plot_distribution_grid(
                 axes[1].imshow(r[:, :, iz].T, origin="lower", vmin=vmin, vmax=vmax, extent=extent)
                 axes[1].axis("off")
             if ix == 0:
-                axes[0].text(-0.1, 0.5, "Prediction", ha="center", va="center", transform=axes[0].transAxes, rotation="vertical", fontsize=fontsize)
+                axes[0].text(
+                    -0.1,
+                    0.5,
+                    "Prediction",
+                    ha="center",
+                    va="center",
+                    transform=axes[0].transAxes,
+                    rotation="vertical",
+                    fontsize=fontsize,
+                )
                 if r is not None:
                     axes[1].text(
-                        -0.1, 0.5, "Reference", ha="center", va="center", transform=axes[1].transAxes, rotation="vertical", fontsize=fontsize
+                        -0.1,
+                        0.5,
+                        "Reference",
+                        ha="center",
+                        va="center",
+                        transform=axes[1].transAxes,
+                        rotation="vertical",
+                        fontsize=fontsize,
                     )
 
         plt.savefig(save_path := os.path.join(outdir, f"{ind}_pred_dist.png"))

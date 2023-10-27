@@ -68,7 +68,9 @@ class Atom:
         """Return a deepcopy of this object"""
         return copy.deepcopy(self)
 
-    def array(self, xyz: bool = False, q: bool = False, element: bool = False, class_index: bool = False, class_weights: bool = False) -> np.ndarray:
+    def array(
+        self, xyz: bool = False, q: bool = False, element: bool = False, class_index: bool = False, class_weights: bool = False
+    ) -> np.ndarray:
         """
         Return an array representation of the atom in order [xyz, q, element, class_index, one_hot_class]
 
@@ -205,7 +207,9 @@ class MoleculeGraph:
         Returns: New molecule graph with indices permuted.
         """
         if len(permutation) != len(self.atoms):
-            raise ValueError(f"Length of permutation list {len(permutation)} does not match " + f"the number of atoms in graph {len(self.atoms)}")
+            raise ValueError(
+                f"Length of permutation list {len(permutation)} does not match the number of atoms in graph {len(self.atoms)}"
+            )
         new_atoms = [self.atoms[i].copy() for i in permutation]
         new_bonds = []
         for b in self.bonds:
@@ -251,7 +255,12 @@ class MoleculeGraph:
         return A
 
     def transform_xy(
-        self, shift: Tuple[float, float] = (0, 0), rot_xy: float = 0, flip_x: bool = False, flip_y: bool = False, center: Tuple[float, float] = (0, 0)
+        self,
+        shift: Tuple[float, float] = (0, 0),
+        rot_xy: float = 0,
+        flip_x: bool = False,
+        flip_y: bool = False,
+        center: Tuple[float, float] = (0, 0),
     ) -> Self:
         """
         Transform atom positions in the xy plane.
