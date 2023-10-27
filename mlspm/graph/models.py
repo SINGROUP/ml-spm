@@ -1,4 +1,5 @@
-from typing import Tuple, Optional
+import warnings
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -6,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..modules import AttentionConvZ, Conv3dBlock, UNetAttentionConv, _get_padding
-from . import find_gaussian_peaks, Atom, MoleculeGraph
+from . import Atom, MoleculeGraph, find_gaussian_peaks, make_box_borders
 
 
 def _get_activation(activation):
@@ -54,6 +55,7 @@ class PosNet(nn.Module):
         peak_std: Standard deviation of atom position grid peaks in angstroms.
         match_threshold: Detection threshold for matching when finding atom position peaks.
         match_method: Method for template matching when finding atom position peaks. See .utils.find_gaussian_peaks for options.
+        device: Device to store model on.
     """
 
     def __init__(
@@ -77,6 +79,7 @@ class PosNet(nn.Module):
         peak_std: float = 0.3,
         match_threshold: float = 0.7,
         match_method: str = "msd_norm",
+        device: str = 'cuda'
     ):
         super().__init__()
 
@@ -104,7 +107,15 @@ class PosNet(nn.Module):
         encode_block_channels = [1] + encode_block_channels
         self.encode_blocks = nn.ModuleList(
             [
-                Conv3dBlock(encode_block_channels[i], encode_block_channels[i + 1], 3, encode_block_depth, padding_mode, res_connections, self.act)
+                Conv3dBlock(
+                    encode_block_channels[i],
+                    encode_block_channels[i + 1],
+                    3,
+                    encode_block_depth,
+                    padding_mode,
+                    res_connections,
+                    self.act,
+                )
                 for i in range(self.num_blocks)
             ]
         )
@@ -132,7 +143,14 @@ class PosNet(nn.Module):
         self.decode_blocks = nn.ModuleList(
             [
                 Conv3dBlock(
-                    decode_block_channels2[i], decode_block_channels[i], 3, decode_block_depth, padding_mode, res_connections, self.act, False
+                    decode_block_channels2[i],
+                    decode_block_channels[i],
+                    3,
+                    decode_block_depth,
+                    padding_mode,
+                    res_connections,
+                    self.act,
+                    False,
                 )
                 for i in range(self.num_blocks - 1)
             ]
@@ -152,7 +170,13 @@ class PosNet(nn.Module):
                 for i in range(self.num_blocks - 1)
             ]
         )
-        self.out_conv = nn.Conv3d(decode_block_channels2[-1], 1, kernel_size=3, padding=_get_padding(3, 3), padding_mode=padding_mode)
+        self.out_conv = nn.Conv3d(
+            decode_block_channels2[-1],
+            1,
+            kernel_size=3,
+            padding=_get_padding(3, 3),
+            padding_mode=padding_mode,
+        )
 
         # Attention convolution for dealing with variable z sizes at the end of the encoder
         enc_channels = self.encode_block_channels
@@ -160,24 +184,14 @@ class PosNet(nn.Module):
 
         # Attention convolutions for the skip connections
         self.att_conv_skip = nn.ModuleList(
-            [AttentionConvZ(c, z_out, conv_depth=3, padding_mode=self.padding_mode) for c, z_out in zip(reversed(enc_channels[:-1]), z_outs[1:])]
+            [
+                AttentionConvZ(c, z_out, conv_depth=3, padding_mode=self.padding_mode)
+                for c, z_out in zip(reversed(enc_channels[:-1]), z_outs[1:])
+            ]
         )
 
-    def make_box_borders(self, shape: Tuple[int, int]) -> np.ndarray:
-        """
-        Make grid box borders for a given grid xy shape.
-
-        Arguments:
-            shape: Grid xy shape.
-
-        Returns: Box start and end coordinates in the form ((x_start, y_start, z_start), (x_end, y_end, z_end)).
-        """
-        # fmt:off
-        box_borders = np.array([
-            [                            0,                             0, self.grid_z_range[0]],
-            [self.afm_res * (shape[0] - 1), self.afm_res * (shape[1] - 1), self.grid_z_range[1]]
-        ])  # fmt:on
-        return box_borders
+        self.device = device
+        self.to(device)
 
     def forward(self, x: torch.Tensor, return_attention: bool = False) -> torch.Tensor | Tuple[torch.Tensor, list[torch.Tensor]]:
         xs = []
@@ -249,8 +263,14 @@ class PosNet(nn.Module):
         with torch.no_grad():
             xt, attention = self.forward(xt.unsqueeze(1), return_attention=True)
 
-        box_borders = self.make_box_borders(x.shape[1:3])
-        atom_pos, _, _ = find_gaussian_peaks(xt, box_borders, match_threshold=self.match_threshold, std=self.peak_std, method=self.match_method)
+        box_borders = make_box_borders(x.shape[1:3], (self.afm_res, self.afm_res), z_range=self.grid_z_range)
+        atom_pos, _, _ = find_gaussian_peaks(
+            xt,
+            box_borders,
+            match_threshold=self.match_threshold,
+            std=self.peak_std,
+            method=self.match_method,
+        )
 
         if isinstance(x, np.ndarray):
             attention = [a.cpu().numpy() for a in attention]
@@ -259,12 +279,13 @@ class PosNet(nn.Module):
         return atom_pos, xt, attention
 
 
-class GraphImgNet(nn.Module): #TODO rest of docstrings
+class GraphImgNet(nn.Module):  # TODO rest of docstrings
     """
     Image-to-graph model that constructs a molecule graph out of atom positions and an AFM image.
 
     Arguments:
-        posnet: PosNet for predicting atom positions from an AFM image.
+        posnet: PosNet for predicting atom positions from an AFM image. Required when training or doing inference without
+            pre-defined atom positions.
         n_classes: Number of different classes for nodes.
         iters: Number of message passing iterations.
         node_feature_size: Number of hidden node features.
@@ -272,6 +293,7 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         message_hidden_size: Size of hidden layers in message MLP.
         edge_cutoff: Cutoff radius in angstroms for edges between atoms within MPNN.
         afm_cutoff: Cutoff radius in angstroms for receptive regions around each atom.
+        afm_res: Real-space size of pixels in xy-plane in input AFM images in angstroms.
         conv_channels: Number channels in 3D conv blocks encoding AFM image regions.
         conv_depth: Number of layers in each 3D conv block.
         node_out_hidden_size: Size of hidden layers in node classification MLP.
@@ -285,14 +307,15 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
 
     def __init__(
         self,
-        posnet: PosNet,
         n_classes: int,
+        posnet: Optional[PosNet] = None,
         iters: int = 3,
         node_feature_size: int = 20,
         message_size: int = 20,
         message_hidden_size: int = 64,
         edge_cutoff: float = 3.0,
         afm_cutoff: float = 1.25,
+        afm_res: float = 0.125,
         conv_channels: list[int] = [4, 8, 16],
         conv_depth: int = 2,
         node_out_hidden_size: int = 128,
@@ -313,8 +336,15 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         self.act = _get_activation(activation)
         self.edge_cutoff = edge_cutoff
         self.afm_cutoff = afm_cutoff
+        self.afm_res = afm_res
         self.conv_channels = conv_channels
         self.padding_mode = padding_mode
+
+        if (self.posnet is not None) and not np.allclose(self.posnet.afm_res, self.afm_res):
+            warnings.warn(
+                f"AFM pixel resolution ({self.afm_res}) does not match with the resolution in PosNet ({self.posnet.afm_res}). "
+                "This can lead to bad inference results."
+            )
 
         self.pool_type = pool_type
         pool = _get_pool(self.pool_type)
@@ -333,7 +363,15 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         conv_in_channels = [1] + conv_channels[:-1]
         self.conv_blocks = nn.ModuleList(
             [
-                Conv3dBlock(conv_in_channels[i], conv_channels[i], 3, conv_depth, padding_mode, res_connections, self.act)
+                Conv3dBlock(
+                    conv_in_channels[i],
+                    conv_channels[i],
+                    3,
+                    conv_depth,
+                    padding_mode,
+                    res_connections,
+                    self.act,
+                )
                 for i in range(len(self.conv_channels))
             ]
         )
@@ -341,13 +379,28 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         # Attention convolution for dealing with variable feature maps size at the end of the AFM image encoder
         in_channels = self.conv_channels[-1]
         self.att_conv = Conv3dBlock(
-            in_channels, in_channels, kernel_size=3, depth=3, padding_mode=self.padding_mode, res_connection=False, last_activation=False
+            in_channels,
+            in_channels,
+            kernel_size=3,
+            depth=3,
+            padding_mode=self.padding_mode,
+            res_connection=False,
+            last_activation=False,
         )
 
         self.node_transform = nn.Linear(conv_channels[-1], node_feature_size)
 
-        self.class_net = nn.Sequential(nn.Linear(node_feature_size, node_out_hidden_size), self.act, nn.Linear(node_out_hidden_size, n_classes))
-        self.edge_net = nn.Sequential(nn.Linear(node_feature_size, edge_out_hidden_size), self.act, nn.Linear(edge_out_hidden_size, 1), nn.Sigmoid())
+        self.class_net = nn.Sequential(
+            nn.Linear(node_feature_size, node_out_hidden_size),
+            self.act,
+            nn.Linear(node_out_hidden_size, n_classes),
+        )
+        self.edge_net = nn.Sequential(
+            nn.Linear(node_feature_size, edge_out_hidden_size),
+            self.act,
+            nn.Linear(edge_out_hidden_size, 1),
+            nn.Sigmoid(),
+        )
 
         self.device = device
         self.to(device)
@@ -358,20 +411,31 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
             print("Encountered an empty position list")
             return torch.zeros((0, 1, 1, 1), device=self.device)
 
-        ind_radius = int(self.afm_cutoff / self.posnet.afm_res)
+        ind_radius = int(self.afm_cutoff / self.afm_res)
 
         # Pad AFM image so that image regions on the edges are the same size
-        x = F.pad(x, (0, 0, ind_radius, ind_radius, ind_radius, ind_radius), mode="constant", value=0)
+        x = F.pad(
+            x,
+            (0, 0, ind_radius, ind_radius, ind_radius, ind_radius),
+            mode="constant",
+            value=0,
+        )
 
         x_afm = []
         for ib, p in enumerate(pos):
             # Find xy index range around each atom
-            ind_min = ((p[:, :2] - self.afm_cutoff) / self.posnet.afm_res).round().long()
+            ind_min = ((p[:, :2] - self.afm_cutoff) / self.afm_res).round().long()
             ind_min += ind_radius  # Add radius due to padding
             ind_max = ind_min + 2 * ind_radius + 1
 
             for ia in range(p.shape[0]):
-                x_afm.append(x[ib, ind_min[ia, 0] : ind_max[ia, 0], ind_min[ia, 1] : ind_max[ia, 1]])
+                x_afm.append(
+                    x[
+                        ib,
+                        ind_min[ia, 0] : ind_max[ia, 0],
+                        ind_min[ia, 1] : ind_max[ia, 1],
+                    ]
+                )
 
         return torch.stack(x_afm, axis=0)
 
@@ -467,13 +531,16 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
 
         return node_features, edge_features
 
-    def forward(self, x: torch.Tensor, pos: Optional[list[torch.Tensor]] = None) -> Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
+    def forward(
+        self, x: torch.Tensor, pos: Optional[list[torch.Tensor]] = None
+    ) -> Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Arguments:
             x: Batch of AFM images.
             pos: Atom positions for each batch item. If None, the positions are predicted from the AFM images.
                 The positions should be such that the lower left corner of the AFM image is at coordinate (0, 0),
-                and all positions are within the bounds of the AFM image.
+                and all positions are within the bounds of the AFM image. Model needs to be constructed with PosNet
+                defined in order for the position prediction to work.
 
         Returns:
             node_classes: Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
@@ -486,6 +553,8 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         assert x.ndim == 4, "Wrong number of dimensions in AFM tensor. Should be 4."
 
         if pos is None:
+            if self.posnet is None:
+                raise RuntimeError(f"Attempting to predict atom positions, but PosNet is not defined.")
             pos, _, _ = self.posnet.get_positions(x)
 
         # Gather all AFM image regions to one tensor
@@ -510,7 +579,11 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         return node_classes, edge_classes, edges
 
     def predict_graph(
-        self, x: torch.Tensor | np.ndarray, pos: Optional[torch.Tensor] = None, bond_threshold: float = 0.5, return_grid: bool = False
+        self,
+        x: torch.Tensor | np.ndarray,
+        pos: Optional[torch.Tensor] = None,
+        bond_threshold: float = 0.5,
+        return_grid: bool = False,
     ) -> Tuple[list[MoleculeGraph], torch.Tensor | np.ndarray]:
         """
         Predict molecule graphs from AFM images.
@@ -532,6 +605,8 @@ class GraphImgNet(nn.Module): #TODO rest of docstrings
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x).float().to(self.device)
         if pos is None:
+            if self.posnet is None:
+                raise RuntimeError(f"Attempting to predict positions, but PosNet is not defined.")
             pos, grid, _ = self.posnet.get_positions(x)
         node_classes, edge_classes, edges = self.forward(x, pos)
         graphs = self.pred_to_graph(pos, node_classes, edge_classes, edges, bond_threshold)
