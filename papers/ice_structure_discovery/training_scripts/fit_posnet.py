@@ -23,6 +23,7 @@ from mlspm import graph, utils
 from mlspm.cli import parse_args
 from mlspm.logging import LossLogPlot, SyncedLoss
 from mlspm.models import PosNet
+from mlspm.datasets import download_dataset
 
 
 def make_model(device, cfg):
@@ -402,6 +403,9 @@ if __name__ == '__main__':
     torch.manual_seed(cfg['random_seed'])
     random.seed(cfg['random_seed'])
     np.random.seed(cfg['random_seed'])
+
+    # Download the dataset if it's not already there
+    download_dataset(cfg['dataset'], cfg['data_dir'])
 
     # Start run
     mp.set_start_method('spawn')
