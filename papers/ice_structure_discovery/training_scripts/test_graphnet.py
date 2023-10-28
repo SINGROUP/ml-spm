@@ -15,10 +15,8 @@ import mlspm.data_loading as dl
 import mlspm.preprocessing as pp
 import mlspm.visualization as vis
 from mlspm import graph, utils
-from mlspm.cli import parse_args
-from mlspm.logging import LossLogPlot, SyncedLoss
-from mlspm.losses import GraphLoss
 from mlspm.models import GraphImgNet, PosNet
+from mlspm.datasets import download_dataset
 
 
 def make_model(device, cfg):
@@ -262,14 +260,17 @@ def run(cfg):
 
 if __name__ == '__main__':
 
+    graphnet_fit_dir = Path('./fit_graphnet_Cu111')
+    posnet_fit_dir = Path('./fit_posnet_Cu111')
+
     # Get config
-    config_path = Path('./fit_graphnet') / 'config.yaml'
+    config_path = Path(graphnet_fit_dir) / 'config.yaml'
     with open(config_path, 'r') as f:
         cfg = yaml.safe_load(f)
     
     cfg['run_dir'] = './test_graphnet'
-    cfg['posnet_weights'] = './fit_posnet/best_model.pth'
-    cfg['graphnet_weights'] = './fit_graphnet/best_model.pth'
+    cfg['posnet_weights'] = str(posnet_fit_dir / 'best_model.pth')
+    cfg['graphnet_weights'] = str(graphnet_fit_dir / 'best_model.pth')
     cfg['world_size'] = 1
 
     run_dir = Path(cfg['run_dir'])
@@ -282,6 +283,9 @@ if __name__ == '__main__':
     torch.manual_seed(cfg['random_seed'])
     random.seed(cfg['random_seed'])
     np.random.seed(cfg['random_seed'])
+
+    # Download the dataset if it's not already there
+    download_dataset(cfg['dataset'], cfg['data_dir'])
 
     # Start test
     run(cfg)

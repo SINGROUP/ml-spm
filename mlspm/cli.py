@@ -13,6 +13,7 @@ def parse_args() -> dict:
     # TODO add help
     parser = argparse.ArgumentParser("Fit ML model")
     parser.add_argument("--run_dir", type=str, default="./")
+    parser.add_argument("--dataset", type=str)
     parser.add_argument("--data_dir", type=str)
     parser.add_argument("--urls_train", type=str)
     parser.add_argument("--urls_val", type=str)
