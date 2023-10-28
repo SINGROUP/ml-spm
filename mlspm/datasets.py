@@ -5,11 +5,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.request import urlretrieve
 
-# fmt: off
 DATASET_URLS = {
-    "AFM-ice-Cu111": "https://zenodo.org/records/10047850/files/AFM-ice-Cu111.tar.gz?download=1"
+    "AFM-ice-Cu111": "https://zenodo.org/records/10047850/files/AFM-ice-Cu111.tar.gz?download=1",
+    "AFM-ice-Au111-monolayer": "https://zenodo.org/records/10049832/files/AFM-ice-Au111-monolayer.tar.gz?download=1",
+    "AFM-ice-Au111-bilayer": "https://zenodo.org/records/10049856/files/AFM-ice-Au111-bilayer.tar.gz?download=1",
 }
-# fmt: on
 
 
 def _print_progress(block_num, block_size, total_size):
@@ -51,6 +51,8 @@ def download_dataset(name: str, target_dir: PathLike):
 
     The following datasets are available:
         - 'AFM-ice-Cu111': https://doi.org/10.5281/zenodo.10047850
+        - 'AFM-ice-Au111-monolayer': https://doi.org/10.5281/zenodo.10049832
+        - 'AFM-ice-Au111-bilayer': https://doi.org/10.5281/zenodo.10049856
 
     Arguments:
         name: Name of dataset to download.
