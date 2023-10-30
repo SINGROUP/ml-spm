@@ -11,6 +11,7 @@ DATASET_URLS = {
     "AFM-ice-Cu111": "https://zenodo.org/records/10047850/files/AFM-ice-Cu111.tar.gz?download=1",
     "AFM-ice-Au111-monolayer": "https://zenodo.org/records/10049832/files/AFM-ice-Au111-monolayer.tar.gz?download=1",
     "AFM-ice-Au111-bilayer": "https://zenodo.org/records/10049856/files/AFM-ice-Au111-bilayer.tar.gz?download=1",
+    "AFM-ice-exp": "https://zenodo.org/records/10054847/files/exp_data_ice.tar.gz?download=1",
 }
 
 
@@ -37,12 +38,12 @@ def download_dataset(name: str, target_dir: PathLike):
         - 'AFM-ice-Cu111': https://doi.org/10.5281/zenodo.10047850
         - 'AFM-ice-Au111-monolayer': https://doi.org/10.5281/zenodo.10049832
         - 'AFM-ice-Au111-bilayer': https://doi.org/10.5281/zenodo.10049856
+        - 'AFM-ice-exp': https://doi.org/10.5281/zenodo.10054847
 
     Arguments:
         name: Name of dataset to download.
-        target_dir: Directory where dataset will be unpacked into. The directory and its parents will be created
-            if they do not exist already. If the directory already exists and is not empty, then the operation
-            is aborted.
+        target_dir: Directory where dataset will be unpacked into. The directory and its parents will be created if they
+            do not exist already. If the directory already exists and is not empty, then the operation is aborted.
     """
     try:
         dataset_url = DATASET_URLS[name]

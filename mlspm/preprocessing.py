@@ -1,7 +1,9 @@
 import random
+from typing import Tuple
 
 import numpy as np
 import scipy.ndimage as nimg
+from PIL import Image
 
 
 def add_norm(Xs: list[np.ndarray], per_layer: bool = True):
@@ -170,3 +172,40 @@ def top_atom_to_zero(xyzs: list[np.ndarray]):
         xyz[:, 2] -= xyz[:, 2].max()
         new_xyzs.append(xyz)
     return new_xyzs
+
+
+def interpolate_and_crop(
+    Xs: list[np.ndarray], real_dim: Tuple[int, int], target_res: float = 0.125, target_multiple: int = 8
+) -> list[np.ndarray]:
+    """
+    Interpolate a batch of AFM images to target resolution and crop to a target multiple of pixels in the xy plane.
+
+    Arguments:
+        X: AFM images to interpolate and crop.
+        real_dim: Real-space size of AFM image region in x- and y-directions in Ångstroms.
+        target_res: Target size for a pixel in angstroms.
+        target_multiple: Target multiple of pixels of output image.
+
+    Returns: Interpolated and cropped AFM images.
+    """
+
+    resized_shape = (int(real_dim[1] // target_res), int(real_dim[0] // target_res))
+    for k, x in enumerate(Xs):
+        # Interpolate for correct resolution
+        Xs_ = np.empty((x.shape[0], resized_shape[1], resized_shape[0], x.shape[-1]))
+        for i in range(x.shape[0]):
+            for j in range(x.shape[-1]):
+                Xs_[i, :, :, j] = np.array(Image.fromarray(x[i, :, :, j]).resize(resized_shape, Image.BILINEAR))
+
+        # Crop for correct multiple of pixels
+        dx = resized_shape[1] % target_multiple
+        x_start = int(np.floor(dx / 2))
+        x_end = resized_shape[1] - int(np.ceil(dx / 2))
+
+        dy = resized_shape[0] % target_multiple
+        y_start = int(np.floor(dy / 2))
+        y_end = resized_shape[0] - int(np.ceil(dy / 2))
+
+        Xs[k] = Xs_[:, x_start:x_end, y_start:y_end]
+
+    return Xs
