@@ -8,6 +8,7 @@ import torch.nn.functional as F
 
 from ..modules import AttentionConvZ, Conv3dBlock, UNetAttentionConv, _get_padding
 from . import Atom, MoleculeGraph, find_gaussian_peaks, make_box_borders
+from .._weights import download_weights
 
 
 def _get_activation(activation):
@@ -612,3 +613,87 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         graphs = self.pred_to_graph(pos, node_classes, edge_classes, edges, bond_threshold)
         ret = (graphs, grid) if return_grid else graphs
         return ret
+
+
+class GraphImgNetIce(GraphImgNet):
+    """
+    GraphImgNet with hyperparameters set exactly as in the paper "Structure discovery in Atomic Force Microscopy imaging of ice",
+    https://arxiv.org/abs/2310.17161.
+
+    Three sets of pretrained weights are available:
+        - 'cu111'
+        - 'au111-monolayer'
+        - 'au111-bilayer'
+
+    Arguments:
+        pretrained_weights: If specified, load pretrained weights.
+        grid_z_range: The real-space range in z-direction of the position grid in angstroms. Of the format (z_min, z_max).
+            Has to be specified when pretrained_weights is not given.
+        device: Device to store model on.
+    """
+
+    def __init__(self, pretrained_weights: Optional[str] = None, grid_z_range: Optional[Tuple[float, float]] = None, device="cuda"):
+        
+        if pretrained_weights is not None:
+            ice_z_ranges = {
+                "cu111": (-2.9, 0.5),
+                "au111-monolayer": (-2.9, 0.5),
+                "au111-bilayer": (-3.5, 0.5),
+            }
+            z_range_weights = ice_z_ranges[pretrained_weights]
+            if (grid_z_range is not None) and not np.allclose(z_range_weights, grid_z_range):
+                warnings.warn(f"Specified grid z range ({grid_z_range}) does not match one for pretrained_weights ({z_range_weights})")
+            else:
+                grid_z_range = z_range_weights
+        elif grid_z_range is None:
+            raise ValueError("At least one of pretrained_weights or grid_z_range has to be specified.")
+
+        outsize = round((grid_z_range[1] - grid_z_range[0]) / 0.1) + 1
+
+        posnet = PosNet(
+            encode_block_channels=[16, 32, 64, 128],
+            encode_block_depth=3,
+            decode_block_channels=[128, 64, 32],
+            decode_block_depth=2,
+            decode_block_channels2=[128, 64, 32],
+            decode_block_depth2=3,
+            attention_channels=[128, 128, 128],
+            res_connections=True,
+            activation="relu",
+            padding_mode="zeros",
+            pool_type="avg",
+            decoder_z_sizes=[5, 15, outsize],
+            z_outs=[3, 3, 5, 10],
+            attention_activation='softmax',
+            afm_res=0.125,
+            grid_z_range=grid_z_range,
+            peak_std=0.20,
+            match_threshold=0.7,
+            match_method="msd_norm",
+            device=device,
+        )
+        super().__init__(
+            n_classes=2,
+            posnet=posnet,
+            iters=5,
+            node_feature_size=40,
+            message_size=40,
+            message_hidden_size=196,
+            edge_cutoff=3.0,
+            afm_cutoff=1.125,
+            afm_res=0.125,
+            conv_channels=[12, 24, 48],
+            conv_depth=2,
+            node_out_hidden_size=196,
+            edge_out_hidden_size=196,
+            res_connections=True,
+            activation="relu",
+            padding_mode="zeros",
+            pool_type="avg",
+            device=device,
+        )
+        if pretrained_weights is not None:
+            weights_name = f"graph-ice-{pretrained_weights}"
+            weights_path = download_weights(weights_name)
+            weights = torch.load(weights_path)
+            self.load_state_dict(weights)
