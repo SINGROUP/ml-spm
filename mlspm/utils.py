@@ -91,6 +91,22 @@ def _get_distributed():
         local_rank = global_rank = 0
     return world_size, local_rank, global_rank, group
 
+def _print_progress(block_num, block_size, total_size):
+    if total_size == -1:
+        return
+    delta = block_size / total_size * 100
+    current_size = block_num * block_size
+    percent = current_size / total_size * 100
+    percent_int = int(percent)
+    if (percent - percent_int) > 1.0001 * delta:
+        # Only print when crossing an integer percentage
+        return
+    if block_num > 0:
+        print("\b\b\b", end="", flush=True)
+    if current_size < total_size:
+        print(f"{percent_int:2d}%", end="", flush=True)
+    else:
+        print("Done")
 
 class Checkpointer:
     """

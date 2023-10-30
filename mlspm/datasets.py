@@ -5,29 +5,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.request import urlretrieve
 
+from .utils import _print_progress
+
 DATASET_URLS = {
     "AFM-ice-Cu111": "https://zenodo.org/records/10047850/files/AFM-ice-Cu111.tar.gz?download=1",
     "AFM-ice-Au111-monolayer": "https://zenodo.org/records/10049832/files/AFM-ice-Au111-monolayer.tar.gz?download=1",
     "AFM-ice-Au111-bilayer": "https://zenodo.org/records/10049856/files/AFM-ice-Au111-bilayer.tar.gz?download=1",
 }
-
-
-def _print_progress(block_num, block_size, total_size):
-    if total_size == -1:
-        return
-    delta = block_size / total_size * 100
-    current_size = block_num * block_size
-    percent = current_size / total_size * 100
-    percent_int = int(percent)
-    if (percent - percent_int) > 1.0001 * delta:
-        # Only print when crossing an integer percentage
-        return
-    if block_num > 0:
-        print("\b\b\b", end="", flush=True)
-    if current_size < total_size:
-        print(f"{percent_int:2d}%", end="", flush=True)
-    else:
-        print("Done")
 
 
 def _is_within_directory(directory, target):
