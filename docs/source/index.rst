@@ -10,7 +10,7 @@ Welcome to mlspm's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   mlspm
 
 Indices and tables
 ==================
