@@ -1,1 +1,1 @@
-from .graph.losses import *
+from .graph.losses import GraphLoss

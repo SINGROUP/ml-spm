@@ -6,8 +6,7 @@ from matplotlib.ticker import MaxNLocator
 from scipy.spatial.distance import cdist, directed_hausdorff
 
 from ..utils import elements
-from ..visualization import plot_confusion_matrix
-from . import MoleculeGraph
+from ._molecule_graph import MoleculeGraph
 
 
 class GraphStats:  # TODO docstrings
@@ -178,6 +177,9 @@ class GraphStats:  # TODO docstrings
             outdir: Directory where images are saved.
             verbose: Whether to print information.
         """
+
+        # Import here, because otherwise leads to a circular import
+        from mlspm.visualization import plot_confusion_matrix
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)

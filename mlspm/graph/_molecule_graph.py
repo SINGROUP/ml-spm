@@ -145,10 +145,12 @@ class MoleculeGraph:
             remove_inds: Indices of atoms to remove.
 
         Returns:
-            new_molecule: MoleculeGraph. New molecule graph where the atoms and bonds have been removed.
-            removed: Removed atoms and bonds. Each list item is a tuple (atom, bonds) corresponding to one of the removed atoms.
-                The bonds are encoded as an indicator list where 0 indicates no bond and 1 indicates a bond with the atom at the
-                corresponding index in the new molecule.
+            tuple (new_molecule, removed)
+
+            - new_molecule: New molecule graph where the atoms and bonds have been removed.
+            - removed: Removed atoms and bonds. Each list item is a tuple (atom, bonds) corresponding to one of the removed atoms.
+              The bonds are encoded as an indicator list where 0 indicates no bond and 1 indicates a bond with the atom at the
+              corresponding index in the new molecule.
         """
 
         remove_inds = np.array(remove_inds, dtype=int)

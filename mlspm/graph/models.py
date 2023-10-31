@@ -544,11 +544,13 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
                 defined in order for the position prediction to work.
 
         Returns:
-            node_classes: Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
-                of shape (n_atoms, n_classes).
-            edge_classes: Predicted probabilities for the existence of bonds between atoms indicated by edges. Eatch batch item
-                is a tensor of shape (n_edges,).
-            edges: Possible bond connection indices between atoms. Each batch item is a tensor of shape (2, n_edges).
+            Tuple (node, classes, edge_classes, edges), where
+
+            - node_classes: Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
+              of shape (n_atoms, n_classes).
+            - edge_classes: Predicted probabilities for the existence of bonds between atoms indicated by edges. Eatch batch item
+              is a tensor of shape (n_edges,).
+            - edges: Possible bond connection indices between atoms. Each batch item is a tensor of shape (2, n_edges).
         """
 
         assert x.ndim == 4, "Wrong number of dimensions in AFM tensor. Should be 4."

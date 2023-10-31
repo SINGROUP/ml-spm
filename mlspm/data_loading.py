@@ -13,7 +13,7 @@ import torch
 import webdataset as wds
 from torch.utils.data import get_worker_info
 
-from .graph._data_loading import *
+from .graph._data_loading import collate_graph
 from .logging import setup_file_logger
 from .utils import elements
 
@@ -144,15 +144,18 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
     """
     Process the comment line in a .xyz file and extract the bounding box of the scan.
     The comment either has the format (QUAM dataset)
+
         Lattice="x0 x1 x2 y0 y1 y2 z0 z1 z2"
+
     where the lattice is assumed to be orthogonal and origin at zero, or
+
         Scan window: [[x_start y_start z_start], [x_end y_end z_end]]
 
     Arguments:
         comment: Comment to parse.
 
     Returns:
-        np.ndarray of shape (2, 3). The xyz coordinates of the opposite corners of the scan window.
+        The xyz coordinates of the opposite corners of the scan window in the form ((x_start, y_start, z_start), (x_end, y_end, z_end))
     """
     comment = comment.lower()
     match = re.match('.*lattice="((?:[+-]?(?:[0-9]*\.)?[0-9]+\s?){9})"', comment)
