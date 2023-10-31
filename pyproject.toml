@@ -40,3 +40,7 @@ version = {attr = "mlspm.__version__"}
 
 [tool.black]
 line-length = 135
+
+[tool.isort]
+profile = 'black'
+multi_line_output = 3

@@ -346,6 +346,7 @@ def threshold_atoms_bonds(molecules, threshold=-1.0, use_vdW=False):
 def crop_graph(X, mols, start, size, box_borders, new_start=(0.0, 0.0)):
     """
     Crop AFM images and molecule graphs in a batch to a different size.
+
     Arguments:
         X: list of np.ndarray of shape (batch, x, y, z). AFM images.
         mols: list of MoleculeGraph. Molecule graphs corresponding to the AFM images.
@@ -354,11 +355,13 @@ def crop_graph(X, mols, start, size, box_borders, new_start=(0.0, 0.0)):
         box_borders: tuple ((x_start, y_start, z_start), (x_end, y_end, z_end)). Real-space extent of the
             AFM region in angstroms.
         new_start: tuple of ints (x, y). The start coordinates of the cropped region in angstroms.
+    
     Returns:
-        X: list of np.ndarray of shape (batch, size[0], size[1], z). Cropped AFM images.
-        mols: list of MoleculeGraph. Cropped molecule graphs.
-        box_borders_cropped: tuple ((x_start, y_start, z_start), (x_end, y_end, z_end)). Real-space extent
-            of the cropped region.
+        Tuple (X, mols, box_borders), where
+
+        - X: Cropped AFM images.
+        - mols: Cropped molecule graphs.
+        - box_borders_cropped: Real-space extent of the cropped region as ((x_start, y_start, z_start), (x_end, y_end, z_end)).
     """
 
     x_size, y_size = X[0].shape[1], X[0].shape[2]

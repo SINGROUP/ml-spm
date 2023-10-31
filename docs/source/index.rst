@@ -8,9 +8,8 @@ Welcome to mlspm's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   mlspm
+   reference/index
 
 Indices and tables
 ==================

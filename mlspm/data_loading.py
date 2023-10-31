@@ -13,7 +13,7 @@ import torch
 import webdataset as wds
 from torch.utils.data import get_worker_info
 
-from .graph._data_loading import *
+from .graph._data_loading import collate_graph
 from .logging import setup_file_logger
 from .utils import elements
 
