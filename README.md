@@ -24,3 +24,7 @@ Install:
 ```
 pip install .
 ```
+
+## Papers
+The [`papers`](papers) subdirectory contains training scripts and datasets for specific publications. Currently we have the following:
+- [Structure discovery in Atomic Force Microscopy imaging of ice](papers/ice_structure_discovery)
