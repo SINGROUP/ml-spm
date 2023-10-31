@@ -16,7 +16,7 @@ The subdirectories contain various scripts for training and running predictions 
 
 ## Data
 
-This is a listing of the various datasets used in the paper. They will also be automatically downloaded when running the training or prediction scripts above.
+This is a listing of the various data used in the paper. They will also be automatically downloaded when running the training or prediction scripts above.
 
 Training datasets:
 - Cu(111): https://doi.org/10.5281/zenodo.10047850
