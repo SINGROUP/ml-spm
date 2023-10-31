@@ -6,6 +6,8 @@ Abstract: _The interaction of water with surfaces is crucially important in a wi
 
 ![Workflow](workflow.png)
 
+This folder contains the source code and links to the datasets that were used for training the machine learning models in the above paper.
+
 ## Scripts
 
 The subdirectories contain various scripts for training and running predictions with the models:
@@ -14,7 +16,7 @@ The subdirectories contain various scripts for training and running predictions 
 
 ## Data
 
-Various datasets were used for achieving the results in the paper. This is a listing of those datasets. They will also be automatically downloaded when running the training or prediction scripts above.
+This is a listing of the various datasets used in the paper. They will also be automatically downloaded when running the training or prediction scripts above.
 
 Training datasets:
 - Cu(111): https://doi.org/10.5281/zenodo.10047850
