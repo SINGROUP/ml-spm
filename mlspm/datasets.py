@@ -35,10 +35,10 @@ def download_dataset(name: str, target_dir: PathLike):
     Download and unpack a dataset to a target directory.
 
     The following datasets are available:
-        - 'AFM-ice-Cu111': https://doi.org/10.5281/zenodo.10047850
-        - 'AFM-ice-Au111-monolayer': https://doi.org/10.5281/zenodo.10049832
-        - 'AFM-ice-Au111-bilayer': https://doi.org/10.5281/zenodo.10049856
-        - 'AFM-ice-exp': https://doi.org/10.5281/zenodo.10054847
+        - ``'AFM-ice-Cu111'``: https://doi.org/10.5281/zenodo.10047850
+        - ``'AFM-ice-Au111-monolayer'``: https://doi.org/10.5281/zenodo.10049832
+        - ``'AFM-ice-Au111-bilayer'``: https://doi.org/10.5281/zenodo.10049856
+        - ``'AFM-ice-exp'``: https://doi.org/10.5281/zenodo.10054847
 
     Arguments:
         name: Name of dataset to download.

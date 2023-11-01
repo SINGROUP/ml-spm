@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -135,24 +135,25 @@ def find_gaussian_peaks(
     Find real-space positions of gaussian peaks in a 3D position distribution grid.
 
     Arguments:
-        pos_dist: Position distribution array. Should be of shape (n_batch, nx, ny, nz).
+        pos_dist: Position distribution array. Should be of shape ``(n_batch, nx, ny, nz)``.
         box_borders: Real-space extent of the distribution grid in angstroms. The array should be of the form
-            ((x_start, y_start, z_start), (x_end, y_end, z_end)).
-        match_threshold: Detection threshold for matching. Regions above the threshold are chosen for method 'zncc',
-            and regions below the threshold are chosen for methods 'mad', 'msd, 'mad_norm', and 'msd_norm'.
+            ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
+        match_threshold: Detection threshold for matching. Regions above the threshold are chosen for method ``'zncc'``,
+            and regions below the threshold are chosen for methods ``'mad'``, ``'msd'``, ``'mad_norm'``, and ``'msd_norm'``.
         std: Standard deviation of peaks to search for in angstroms.
-        method: 'zncc', 'mad', 'msd', 'mad_norm', or 'msd_norm. Matching method to use. Either zero-normalized
-            cross correlation ('zncc'), mean absolute distance ('mad'), mean squared distance ('msd'), or the
-            normalized version of the latter two ('mad_norm', 'msd_norm').
+        method: ``'zncc'``, ``'mad'``, ``'msd'``, ``'mad_norm'``, or ``'msd_norm'``. Matching method to use. Either zero-normalized
+            cross correlation (``'zncc'``), mean absolute distance (``'mad'``), mean squared distance (``'msd'``), or the
+            normalized version of the latter two (``'mad_norm'``, ``'msd_norm'``).
 
-    Returns: xyzs, match, labels
-        xyzs: list of np.ndarray or torch.Tensor of shape (num_atoms, 3). Positions of the found atoms.
-            Each item in the list corresponds one batch item.
-        matches: np.ndarray or torch.Tensor of same shape as input pos_dist. Array of matching values.
-            For method 'zncc' larger values, and for 'mad', 'msd', 'mad_norm', and 'msd_norm' smaller
-            values correspond to better match.
-        labels: np.ndarray or torch.Tensor of same shape as input pos_dist. Labelled regions where
-            match is better than match_threshold.
+    Returns: tuple (**xyzs**, **match**, **labels**), where
+
+        - **xyzs**: Positions of the found atoms. Each item in the list is an array of shape (num_atoms, 3)
+          that correspond to one batch item.
+        - **matches**: Array of matching values. Of the same shape as input **pos_dist**. For method ``'zncc'`` larger values,
+          and for ``'mad'``, ``'msd'``, ``'mad_norm'``, and ``'msd_norm'`` smaller values correspond to a better match.
+        - **labels**: Labelled regions where match is better than match_threshold. Of the same shape as input **pos_dist**.
+
+        The arrays are of same type as the input **pos_dist** array.
     """
 
     if method not in ["zncc", "mad", "msd", "mad_norm", "msd_norm"]:
@@ -172,19 +173,21 @@ def find_gaussian_peaks(
     return xyzs, matches, labels
 
 
-def make_position_distribution(mols, box_borders, box_res=(0.125, 0.125, 0.1), std=0.3):
+def make_position_distribution(
+    mols: list[MoleculeGraph], box_borders: np.ndarray, box_res: Tuple[float, float, float] = (0.125, 0.125, 0.1), std: float = 0.3
+) -> np.ndarray:
     """
-    Make a distribution on a grid based on atom positions. Each atom is represented by
-    a normal distribution.
+    Make a distribution on a grid based on atom positions. Each atom is represented by a normal distribution.
 
     Arguments:
-        mols: list of MoleculeGraph. List of molecules with atom positions.
-        box_borders: tuple ((x_start, y_start, z_start),(x_end, y_end, z_end)). Real-space extent of the grid
-            in angstroms.
-        box_res: tuple (x_res, y_res, z_res). Real-space size of each voxel in angstroms.
-        std: float. Standard deviation of normal distribution for each atom in angstroms.
+        mols: List of molecules.
+        box_borders: Real-space extent of the distribution grid in Ångströms. The array should be of the form
+            ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
+        box_res: Real-space size of a voxel in each direction in Ångströms.
+        std: float. Standard deviation of normal distribution for each atom in Ångströms.
 
-    Returns: np.ndarray of size (n_batch, n_x, n_y, n_z).
+    Returns:
+        Array of shape ``(n_batch, n_x, n_y, n_z)``.
     """
     n_xyz = [int((box_borders[1][i] - box_borders[0][i]) / box_res[i] + 1.01) for i in range(3)]
     atoms = [m.array(xyz=True) if len(m) > 0 else np.empty((0, 3)) for m in mols]
@@ -193,19 +196,19 @@ def make_position_distribution(mols, box_borders, box_res=(0.125, 0.125, 0.1), s
     return pos_dist
 
 
-def shift_mols_window(molecules, scan_windows, start=(0, 0)):
+def shift_mols_window(molecules: list[MoleculeGraph], scan_windows: np.ndarray, start: Tuple[float, float] = (0, 0)) -> np.ndarray:
     """
-    Shift molecule xy coordinates to use the same scan window. All molecules should have the same
-    scan window size.
+    Shift molecule xy coordinates to use the same scan window. All molecules should have the same scan window size.
 
     Arguments:
-        molecules: list of MoleculeGraph. Molecule whose atom positions to shift.
-        scan_windows: list of np.ndarray of shape (n_mol, 2, 3). Scan window for each molecule.
-        start: tuple of floats (x, y). Start of the new scan window.
+        molecules: Molecules whose atom positions to shift.
+        scan_windows: Scan window for each molecule. Arrays of shape (n_mol, 2, 3).
+        start: The lower left corner of the new scan window.
 
-    Returns:
-        new_molecules: list of MoleculeGraph. Molecule with shifted atom coordinates.
-        new_scan_window: tuple ((x_start, y_start), (x_end, y_end)). New scan window.
+    Returns: Tuple (**new_molecules**, **new_scan_window**), where
+
+        - **new_molecules**: Molecules with shifted atom coordinates.
+        - **new_scan_window**: New scan window in the form ((x_start, y_start), (x_end, y_end)).
     """
 
     assert len(molecules) == len(scan_windows)
@@ -216,7 +219,7 @@ def shift_mols_window(molecules, scan_windows, start=(0, 0)):
         raise ValueError("All molecules do not have the same scan window size.")
 
     x_size, y_size = swx[0], swy[0]
-    new_scan_window = (start, (start[0] + x_size, start[1] + y_size))
+    new_scan_window = np.array((start, (start[0] + x_size, start[1] + y_size)))
 
     new_molecules = []
     for mol, sw in zip(molecules, scan_windows):
@@ -226,26 +229,34 @@ def shift_mols_window(molecules, scan_windows, start=(0, 0)):
     return new_molecules, new_scan_window
 
 
-def add_rotation_reflection_graph(X, mols, box_borders, num_rotations=1, reflections=True, crop=None, per_batch_item=True):
+def add_rotation_reflection_graph(
+    X: list[np.ndarray],
+    mols: list[MoleculeGraph],
+    box_borders: np.ndarray,
+    num_rotations: int = 1,
+    reflections: bool = True,
+    crop: Optional[Tuple[int, int] | str] = None,
+    per_batch_item: bool = True,
+) -> Tuple[list[np.ndarray], list[MoleculeGraph]]:
     """
     Random rotation and reflection of AFM images and corresponding molecule graphs.
 
     Arguments:
-        X: np.ndarray of shape (batch, x, y, z). AFM images.
-        mols: list of MoleculeGraph. Molecule graphs corresponding to the AFM images.
-        box_borders: tuple ((x_start, y_start, z_start), (x_end, y_end, z_end)). Real-space extent of the
-            AFM region in angstroms.
-        num_rotations: int. How many rotations for each batch item.
-        reflections: bool. Whether to augment with reflections.
-        crop: None or tuple (x_size, y_size) or 'max'. If tuple, then output batch is cropped to specified
-            size. If 'max, the crop region will be maximized to fit into the rotated image. Atoms outside the
-            cropped region in the molecule graphs are deleted. The crop region is centered to the middle of
-            the image.
-        per_batch_item: bool. If True, rotation is randomized per batch item, otherwise same rotation for all.
+        X: Batch of AFM images. Each array in the list is of the shape ``(batch, x, y, z)``.
+        mols: Molecule graphs corresponding to the AFM images.
+        box_borders: Real-space extent of the AFM image region in Ångströms. The array should be of the form
+            ``((x_start, y_start, ...), (x_end, y_end, ...))``.
+        num_rotations: Number of rotations for each batch item. The batch size is multiplied by this number.
+        reflections: Whether to augment with reflections.
+        crop: If tuple, then output batch is cropped to specified size. If ``'max'``, the crop region will be maximized to fit into
+            the rotated image. Atoms outside the cropped region in the molecule graphs are deleted. The crop region is centered to
+            the middle of the image.
+        per_batch_item: If True, rotation is randomized per batch item, otherwise same rotation for all.
 
-    Returns:
-        X: np.ndarray of shape (batch*num_rotations, x_new, y_new, z). Rotation-augmented AFM images.
-        mols: list of MoleculeGraph. New rotated molecule graphs.
+    Returns: Tuple (**X**, **mols**), where
+
+        - **X**: Rotation-augmented AFM images.
+        - **mols**: New rotated molecule graphs.
     """
 
     box_center = ((box_borders[1][0] + box_borders[0][0]) / 2, (box_borders[1][1] + box_borders[0][1]) / 2)
@@ -293,9 +304,9 @@ def find_bonds(molecules: list[np.ndarray], tolerance=0.2) -> list[list[Tuple[in
     Find bonds in molecules based on atomic distances and a tabulated bond lengths.
 
     Arguments:
-        molecules: Molecule atom position and elements. list of arrays of shape (num_atoms, 4), where each row corresponds
+        molecules: Molecule atom position and elements. List of arrays of shape (num_atoms, 4), where each row corresponds
             to one atom with [x, y, z, element].
-        tolerance: float. Two atoms are bonded if their distance is at most by a factor of 1+tolerance as long as the table
+        tolerance: float. Two atoms are bonded if their distance is at most by a factor of ``1 + tolerance`` as long as the table
             value for the bond length.
 
     Returns: Indices of bonded atoms for each molecule.
@@ -318,15 +329,17 @@ def find_bonds(molecules: list[np.ndarray], tolerance=0.2) -> list[list[Tuple[in
     return bonds
 
 
-def threshold_atoms_bonds(molecules, threshold=-1.0, use_vdW=False):
+def threshold_atoms_bonds(molecules: list[MoleculeGraph], threshold: float = -1.0, use_vdW: bool = False) -> list[MoleculeGraph]:
     """
     Remove atoms and corresponding bonds beyond threshold depth in molecules.
+
     Arguments:
-        molecules: list of MoleculeGraph. Molecules to threshold.
-        threshold: float. Deepest z-coordinate for included atoms (top is 0).
-        use_vdW: Boolean. Whether to add vdW radii to the atom z coordinates when calculating depth.
+        molecules: Molecules to threshold.
+        threshold: Deepest z-coordinate for included atoms (top is 0).
+        use_vdW: Whether to add vdW radii to the atom z coordinates when calculating depth.
+
     Returns:
-        new_molecules: list of MoleculeGraph. Molecules with deep atoms removed.
+        new_molecules: Molecules with deep atoms removed.
     """
     new_molecules = []
     for mol in molecules:
@@ -343,25 +356,32 @@ def threshold_atoms_bonds(molecules, threshold=-1.0, use_vdW=False):
     return new_molecules
 
 
-def crop_graph(X, mols, start, size, box_borders, new_start=(0.0, 0.0)):
+def crop_graph(
+    X: list[np.ndarray],
+    mols: list[MoleculeGraph],
+    start: Tuple[int, int],
+    size: Tuple[int, int],
+    box_borders: np.ndarray,
+    new_start: Tuple[float, float] = (0.0, 0.0),
+) -> Tuple[list[np.ndarray], list[MoleculeGraph], np.ndarray]:
     """
     Crop AFM images and molecule graphs in a batch to a different size.
 
     Arguments:
-        X: list of np.ndarray of shape (batch, x, y, z). AFM images.
-        mols: list of MoleculeGraph. Molecule graphs corresponding to the AFM images.
-        start: tuple of ints (x, y). Start pixels for crop in x and y directions.
-        size: tuple of ints (x, y). Size of cropped region in x and y directions.
-        box_borders: tuple ((x_start, y_start, z_start), (x_end, y_end, z_end)). Real-space extent of the
-            AFM region in angstroms.
-        new_start: tuple of ints (x, y). The start coordinates of the cropped region in angstroms.
-    
-    Returns:
-        Tuple (X, mols, box_borders), where
+        X: Batch of AFM images. Each array in the list is of the shape ``(batch, x, y, z)``.
+        mols: Molecule graphs corresponding to the AFM images.
+        start: Start pixels for crop in x and y directions.
+        size: Size of cropped region in x and y directions.
+        box_borders: Real-space extent of the AFM image region in Ångströms. The array should be of the form
+            ``((x_start, y_start, ...), (x_end, y_end, ...))``.
+        new_start: The start coordinates of the cropped region in angstroms.
 
-        - X: Cropped AFM images.
-        - mols: Cropped molecule graphs.
-        - box_borders_cropped: Real-space extent of the cropped region as ((x_start, y_start, z_start), (x_end, y_end, z_end)).
+    Returns:
+        Tuple (**X**, **mols**, **box_borders**), where
+
+        - **X**: Cropped AFM images.
+        - **mols**: Cropped molecule graphs.
+        - **box_borders_cropped**: Real-space extent of the cropped region as ``((x_start, y_start, ...), (x_end, y_end, ...))``.
     """
 
     x_size, y_size = X[0].shape[1], X[0].shape[2]
@@ -426,10 +446,10 @@ def make_box_borders(shape: Tuple[int, int], res: Tuple[float, float], z_range: 
 
     Arguments:
         shape: Grid xy shape.
-        res: Grid xy pixel resolution in Ånströms.
-        z_range: Grid z start and end coordinates in Ånströms.
+        res: Grid xy pixel resolution in Ångströms.
+        z_range: Grid z start and end coordinates in Ångströms.
 
-    Returns: Box start and end coordinates in the form ((x_start, y_start, z_start), (x_end, y_end, z_end)).
+    Returns: Box start and end coordinates in the form ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
     """
     # fmt:off
     box_borders = np.array([

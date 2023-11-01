@@ -170,7 +170,7 @@ class GraphStats:  # TODO docstrings
 
     def plot(self, outdir: str = "./", verbose: str = 1):
         """
-        Plot histograms of graph sizes, node/bond count differences, hausdorff distances, and maching distances,
+        Plot histograms of graph sizes, node/bond count differences, Hausdorff distances, and maching distances,
         and confusion matrices for node and edge classification.
 
         Arguments:
@@ -316,7 +316,7 @@ class GraphStats:  # TODO docstrings
 
     def report(self, outdir: str = "./", verbose: int = 1):
         """
-        Save to file mean absolute node/bond count diffs, mean hausdorff, mean matching distance, missing/extra atoms,
+        Save to file mean absolute node/bond count diffs, mean Hausdorff, mean matching distance, missing/extra atoms,
         total samples/nodes, average/largest graph size, and node/edge precision/recall.
 
         Arguments:

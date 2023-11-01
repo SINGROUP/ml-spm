@@ -18,7 +18,7 @@ class Atom:
         classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
         class_weights: List of weights or one-hot vector for classes. The weights must sum to unity.
 
-    Note: only one of classes and class_weights can be specified at the same time.
+    Note: only one of **classes** and **class_weights** can be specified at the same time.
     """
 
     def __init__(
@@ -81,7 +81,8 @@ class Atom:
             class_index: Include class index.
             class_weights: Include class weights.
 
-        Returns: Array with requested information.
+        Returns:
+            Array with requested information.
         """
         arr = []
         if xyz:
@@ -108,7 +109,7 @@ class MoleculeGraph:
         classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
         class_weights: List of weights or one-hot vector for classes. The weights must sum to unity.
 
-    Note: only one of classes and class_weights can be specified at the same time.
+    Note: only one of **classes** and **class_weights** can be specified at the same time.
     """
 
     def __init__(
@@ -188,10 +189,11 @@ class MoleculeGraph:
         Add an atom and bonds to molecule graph.
 
         Arguments:
-            atom: Atom. Atom to add.
+            atom: Atom to add.
             bonds: Indicator list (0s and 1s) of bond connections from new atom to existing atoms in the graph.
 
-        Returns: New molecule graph where the atom and bonds have been added.
+        Returns:
+            New molecule graph where the atom and bonds have been added.
         """
         n_atoms = len(self.atoms)
         new_atoms = self.atoms + [atom]
@@ -206,7 +208,8 @@ class MoleculeGraph:
         Arguments:
             permutation: New index order. Has to be same length as the number of atoms in graph.
 
-        Returns: New molecule graph with indices permuted.
+        Returns:
+            New molecule graph with indices permuted.
         """
         if len(permutation) != len(self.atoms):
             raise ValueError(
@@ -232,7 +235,8 @@ class MoleculeGraph:
             class_index: Include class index.
             class_weights: Include class weights.
 
-        Returns: Array with requested information. Each element in first dimension corresponds to one atom.
+        Returns:
+            Array with requested information. Each element in first dimension corresponds to one atom.
         """
         if len(self.atoms) > 0:
             arr = np.stack([atom.array(xyz, q, element, class_index, class_weights) for atom in self.atoms], axis=0)
@@ -244,7 +248,8 @@ class MoleculeGraph:
         """
         Return the adjacency matrix of the graph.
 
-        Returns: Adjacency matrix of shape (n_atoms, n_atoms), where the presence of bonds between pairs of atoms are
+        Returns:
+            Adjacency matrix of shape (n_atoms, n_atoms), where the presence of bonds between pairs of atoms are
             indicated by binary values.
 
         """
@@ -274,7 +279,8 @@ class MoleculeGraph:
             flip_y: Mirror atom positions in y direction with respect to the center point.
             center: Point around which transformations are performed.
 
-        Returns: MoleculeGraph. A new molecule graph with rotated atom positions.
+        Returns:
+            A new molecule graph with rotated atom positions.
         """
 
         center = np.array(center)
@@ -309,9 +315,10 @@ class MoleculeGraph:
 
         Arguments:
             box_borders: Real-space extent of the region outside of which atoms are deleted. The array should be of the form
-            ((x_start, y_start, z_start), (x_end, y_end, z_end)).
+                ((x_start, y_start, z_start), (x_end, y_end, z_end)).
 
-        Returns: A new molecule graph without the deleted atoms.
+        Returns:
+            A new molecule graph without the deleted atoms.
         """
 
         remove_inds = []
@@ -334,7 +341,8 @@ class MoleculeGraph:
         Arguments:
             sigma: Standard deviations for displacement in x, y, and z directions in Ångstroms.
 
-        Returns: New molecule graph with randomized atom positions.
+        Returns:
+            New molecule graph with randomized atom positions.
         """
         new_mol = self.copy()
         if len(self) > 0:
