@@ -11,8 +11,8 @@ def add_norm(Xs: list[np.ndarray], per_layer: bool = True):
     Normalize arrays by subracting the mean and dividing by standard deviation. In-place operation.
 
     Arguments:
-        Xs: Arrays to normalize. Each array should be of shape (batch_size, ...).
-        per_layer: If True, normalized separately for each element in last axis of Xs.
+        Xs: Arrays to normalize. Each array should be of shape ``(batch_size, ...)``.
+        per_layer: If True, normalized separately for each element in last axis of **Xs**.
     """
     for X in Xs:
         sh = X.shape
@@ -26,14 +26,14 @@ def add_norm(Xs: list[np.ndarray], per_layer: bool = True):
 
 def add_noise(Xs: list[np.ndarray], c: float = 0.1, randomize_amplitude: bool = False, normal_amplitude: bool = False):
     """
-    Add andom noise to arrays. In-place operation.
+    Add uniform random noise to arrays. In-place operation.
 
     Arguments:
-        Xs: Arrays to add noise to. Each array should be of shape (batch_size, ...).
+        Xs: Arrays to add noise to. Each array should be of shape ``(batch_size, ...)``.
         c: Amplitude of noise. Is multiplied by (max-min) of sample.
-        randomize_amplitude: If True, noise amplitude is uniform random in [0,c] for each sample in the batch.
-        normal_amplitude: If True and randomize_amplitude==True, then instead of uniform, the noise amplitude is distributed
-            like the absolute value of a normally distributed variable with zero mean and standard deviation equal to c.
+        randomize_amplitude: If True, noise amplitude is uniform random in ``[0, c]`` for each sample in the batch.
+        normal_amplitude: If True and ``randomize_amplitude==True``, then instead of uniform, the noise amplitude is distributed
+            like the absolute value of a normally distributed variable with zero mean and standard deviation equal to **c**.
     """
     for X in Xs:
         sh = X.shape
@@ -51,10 +51,10 @@ def add_noise(Xs: list[np.ndarray], c: float = 0.1, randomize_amplitude: bool = 
 
 def add_cutout(Xs: list[np.ndarray], n_holes: int = 5):
     """
-    Randomly add cutouts (square patches of zeros) to images. In-place operation.
+    Randomly add cutouts (rectangular patches of zeros) to images. In-place operation.
 
     Arguments:
-        Xs: Arrays to add cutouts to. Each array should be of shape (batch_size, x, y, z).
+        Xs: Arrays to add cutouts to. Each array should be of shape ``(batch_size, x, y, z)``.
         n_holes: Maximum number of cutouts to add.
     """
 
@@ -100,7 +100,7 @@ def add_gradient(Xs: list[np.ndarray], c: float = 0.3):
     Add a constant gradient plane with random direction to arrays. In-place operation.
 
     Arguments:
-        Xs: Arrays to add gradients to. Each array should be of shape (batch_size, x, y, z).
+        Xs: Arrays to add gradients to. Each array should be of shape ``(batch_size, x, y, z)``.
         c: Maximum range of gradient plane as a fraction of the range of the array values.
     """
     assert len(set([X.shape for X in Xs])) == 1  # All same shape
@@ -121,10 +121,10 @@ def rand_shift_xy_trend(Xs: list[np.ndarray], max_layer_shift: float = 0.02, max
     Randomly shift z-layers in the xy-plane. Each shift is relative to previous one. In-place operation.
 
     Arguments:
-        Xs: Arrays to shift. Each array should be of shape (batch_size, x, y, z).
-        shift_step_max: Maximum fraction of image size by which to shift for each layer. Should be in the interval [0, 1].
-        max_shift_total: Maximum fraction of image size by which to shift in total. Should be in the interval [0, 1] and
-            more than shift_step_max.
+        Xs: Arrays to shift. Each array should be of shape ``(batch_size, x, y, z)``.
+        shift_step_max: Maximum fraction of image size by which to shift for each layer. Should be in the interval ``[0, 1]``.
+        max_shift_total: Maximum fraction of image size by which to shift in total. Should be in the interval ``[0, 1]`` and
+            more than **shift_step_max**.
     """
 
     if not (0 <= max_layer_shift <= 1.0):
@@ -164,8 +164,8 @@ def top_atom_to_zero(xyzs: list[np.ndarray]):
     Set the z coordinate of the highest atom in each molecule to 0. In-place operation.
 
     Arguments:
-        xyzs: Molecule arrays to modify. Each array should be of shape (num_atoms, :).
-            The first three elements on axis 1are the xyz coordinates.
+        xyzs: Molecule arrays to modify. Each array should be of shape ``(num_atoms, :)``, such that
+            the first three elements on the second axis are the xyz coordinates.
     """
     new_xyzs = []
     for xyz in xyzs:
@@ -181,12 +181,13 @@ def interpolate_and_crop(
     Interpolate a batch of AFM images to target resolution and crop to a target multiple of pixels in the xy plane.
 
     Arguments:
-        X: AFM images to interpolate and crop.
+        X: AFM images to interpolate and crop. Each array should be of shape ``(batch_size, x, y, z)``.
         real_dim: Real-space size of AFM image region in x- and y-directions in Ångstroms.
         target_res: Target size for a pixel in angstroms.
         target_multiple: Target multiple of pixels of output image.
 
-    Returns: Interpolated and cropped AFM images.
+    Returns:
+        Interpolated and cropped AFM images.
     """
 
     resized_shape = (int(real_dim[1] // target_res), int(real_dim[0] // target_res))

@@ -66,7 +66,7 @@ class SyncedLoss(Joinable):
         return self.local_rank
 
     def join_hook(self, **kwargs):
-        return SyncedLossJoinHook(self)
+        return _SyncedLossJoinHook(self)
 
     def _sync_losses(self, losses, shadow=False):
         assert self.world_size > 1, self.world_size
@@ -106,7 +106,7 @@ class SyncedLoss(Joinable):
         Append a new batch of loss values.
 
         Arguments:
-            losses: Loss values. Length should match self.num_losses.
+            losses: Loss values. Length should match ``self.num_losses``.
         """
         if not isinstance(losses, list):
             losses = [losses]
@@ -140,7 +140,7 @@ class SyncedLoss(Joinable):
         return losses
 
 
-class SyncedLossJoinHook(JoinHook):
+class _SyncedLossJoinHook(JoinHook):
     """Hook for when the number of batches does not match between processes."""
 
     def __init__(self, synced_loss):
@@ -155,18 +155,17 @@ class SyncedLossJoinHook(JoinHook):
 
 class LossLogPlot:
     """
-    Log and plot model training loss history. Add epoch losses with add_losses and plot with plot_history.
-    Works with distributed training.
+    Log and plot model training loss history. Add losses for each batch with :meth:`add_train_loss` and :meth:`add_train_loss`,
+    and at the end of each epoch call :meth:`next_epoch` to print the status. Works with distributed training.
 
     Arguments:
-        log_path: str. Path where loss log is saved.
-        plot_path: str. Path where plot of loss history is saved.
-        loss_labels: list of str. Labels for different loss components. If length > 1,
-            an additional component 'Total' is prepended to the list.
+        log_path: Path where loss log is saved.
+        plot_path: Path where plot of loss history is saved.
+        loss_labels: Labels for different loss components. If length > 1, an additional component ``'Total'`` is prepended to the list.
         loss_weights: Weights for different loss components when there is more than one.
-        print_interval: int. Loss values are printed every print_interval batches.
-        init_epoch: int or None. Initial epoch. If not None and existing log has more epochs, discard them.
-        stream: file object. Stream where log is printed to.
+        print_interval: Loss values are printed every **print_interval** batches.
+        init_epoch: Initial epoch. If not None and existing log has more epochs, discard them.
+        stream: Stream where log is printed to.
     """
 
     def __init__(
@@ -277,8 +276,16 @@ class LossLogPlot:
         losses = np.mean(synced_loss[-self.print_interval :], axis=0)
         print(f"Epoch {self.epoch}, {mode} batch {len(synced_loss)} - Loss: " + self.loss_str(losses), file=self.stream, flush=True)
 
-    def loss_str(self, losses: list[float] | np.ndarray | torch.Tensor):
-        """Get a pretty string for loss values."""
+    def loss_str(self, losses: list[float] | np.ndarray | torch.Tensor) -> str:
+        """
+        Get a pretty string for loss values.
+
+        Arguments:
+            losses: List of losses of the same length as the number of loss labels.
+
+        Returns:
+            String representation of the losses.
+        """
         if len(losses) != len(self.loss_labels):
             raise ValueError(f"Length of losses ({len(losses)}) does not match with number of loss labels ({len(self.loss_labels)}).")
         if len(self.loss_labels) == 1:
@@ -350,7 +357,7 @@ class LossLogPlot:
 
     def plot_history(self, show: bool = False):
         """
-        Plot history of current losses into self.plot_path.
+        Plot history of current losses into ``self.plot_path``.
 
         Arguments:
             show: Whether to show the plot on screen.
@@ -383,7 +390,7 @@ class LossLogPlot:
         """Return a joinable for uneven training/validation inputs.
 
         Arguments:
-            mode: str. Choose 'train or 'val'.
+            mode: Choose 'train or 'val'.
         """
         if mode not in ["train", "val"]:
             raise ValueError(f"mode should be 'train' or 'val', but got `{mode}`")

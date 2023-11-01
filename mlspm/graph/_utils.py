@@ -141,17 +141,17 @@ def find_gaussian_peaks(
         match_threshold: Detection threshold for matching. Regions above the threshold are chosen for method ``'zncc'``,
             and regions below the threshold are chosen for methods ``'mad'``, ``'msd'``, ``'mad_norm'``, and ``'msd_norm'``.
         std: Standard deviation of peaks to search for in angstroms.
-        method: ``'zncc'``, ``'mad'``, ``'msd'``, ``'mad_norm'``, or ``'msd_norm'``. Matching method to use. Either zero-normalized
-            cross correlation (``'zncc'``), mean absolute distance (``'mad'``), mean squared distance (``'msd'``), or the
-            normalized version of the latter two (``'mad_norm'``, ``'msd_norm'``).
+        method: Matching method to use. Either zero-normalized cross correlation (``'zncc'``), mean absolute distance (``'mad'``),
+            mean squared distance (``'msd'``), or the normalized version of the latter two (``'mad_norm'``, ``'msd_norm'``).
 
-    Returns: tuple (**xyzs**, **match**, **labels**), where
+    Returns:
+        Tuple (**xyzs**, **match**, **labels**), where
 
-        - **xyzs**: Positions of the found atoms. Each item in the list is an array of shape (num_atoms, 3)
+        - **xyzs** - Positions of the found atoms. Each item in the list is an array of shape (num_atoms, 3)
           that correspond to one batch item.
-        - **matches**: Array of matching values. Of the same shape as input **pos_dist**. For method ``'zncc'`` larger values,
+        - **matches** - Array of matching values. Of the same shape as input **pos_dist**. For method ``'zncc'`` larger values,
           and for ``'mad'``, ``'msd'``, ``'mad_norm'``, and ``'msd_norm'`` smaller values correspond to a better match.
-        - **labels**: Labelled regions where match is better than match_threshold. Of the same shape as input **pos_dist**.
+        - **labels** - Labelled regions where match is better than match_threshold. Of the same shape as input **pos_dist**.
 
         The arrays are of same type as the input **pos_dist** array.
     """
@@ -202,13 +202,14 @@ def shift_mols_window(molecules: list[MoleculeGraph], scan_windows: np.ndarray, 
 
     Arguments:
         molecules: Molecules whose atom positions to shift.
-        scan_windows: Scan window for each molecule. Arrays of shape (n_mol, 2, 3).
+        scan_windows: Scan window for each molecule. Arrays of shape ``(n_mol, 2, 3)``.
         start: The lower left corner of the new scan window.
 
-    Returns: Tuple (**new_molecules**, **new_scan_window**), where
+    Returns:
+        Tuple (**new_molecules**, **new_scan_window**), where
 
-        - **new_molecules**: Molecules with shifted atom coordinates.
-        - **new_scan_window**: New scan window in the form ((x_start, y_start), (x_end, y_end)).
+        - **new_molecules** - Molecules with shifted atom coordinates.
+        - **new_scan_window** - New scan window in the form ((x_start, y_start), (x_end, y_end)).
     """
 
     assert len(molecules) == len(scan_windows)
@@ -253,10 +254,11 @@ def add_rotation_reflection_graph(
             the middle of the image.
         per_batch_item: If True, rotation is randomized per batch item, otherwise same rotation for all.
 
-    Returns: Tuple (**X**, **mols**), where
+    Returns:
+        Tuple (**X**, **mols**), where
 
-        - **X**: Rotation-augmented AFM images.
-        - **mols**: New rotated molecule graphs.
+        - **X** - Rotation-augmented AFM images.
+        - **mols** - New rotated molecule graphs.
     """
 
     box_center = ((box_borders[1][0] + box_borders[0][0]) / 2, (box_borders[1][1] + box_borders[0][1]) / 2)
@@ -304,12 +306,13 @@ def find_bonds(molecules: list[np.ndarray], tolerance=0.2) -> list[list[Tuple[in
     Find bonds in molecules based on atomic distances and a tabulated bond lengths.
 
     Arguments:
-        molecules: Molecule atom position and elements. List of arrays of shape (num_atoms, 4), where each row corresponds
-            to one atom with [x, y, z, element].
+        molecules: Molecule atom position and elements. List of arrays of shape ``(num_atoms, 4)``, where each row corresponds
+            to one atom with ``[x, y, z, element]``.
         tolerance: float. Two atoms are bonded if their distance is at most by a factor of ``1 + tolerance`` as long as the table
             value for the bond length.
 
-    Returns: Indices of bonded atoms for each molecule.
+    Returns:
+        Indices of bonded atoms for each molecule.
     """
     bonds = []
     for mol in molecules:
@@ -339,7 +342,7 @@ def threshold_atoms_bonds(molecules: list[MoleculeGraph], threshold: float = -1.
         use_vdW: Whether to add vdW radii to the atom z coordinates when calculating depth.
 
     Returns:
-        new_molecules: Molecules with deep atoms removed.
+        Molecules with deep atoms removed.
     """
     new_molecules = []
     for mol in molecules:
@@ -378,10 +381,10 @@ def crop_graph(
 
     Returns:
         Tuple (**X**, **mols**, **box_borders**), where
-
-        - **X**: Cropped AFM images.
-        - **mols**: Cropped molecule graphs.
-        - **box_borders_cropped**: Real-space extent of the cropped region as ``((x_start, y_start, ...), (x_end, y_end, ...))``.
+        
+        - **X** - Cropped AFM images.
+        - **mols** - Cropped molecule graphs.
+        - **box_borders_cropped** - Real-space extent of the cropped region as ``((x_start, y_start, ...), (x_end, y_end, ...))``.
     """
 
     x_size, y_size = X[0].shape[1], X[0].shape[2]
@@ -416,7 +419,7 @@ def save_graphs_to_xyzs(
     Arguments:
         molecules: Molecule graphs to save.
         classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
-        outfile_format: Formatting string for saved files. Sample index is available in variable "ind".
+        outfile_format: Formatting string for saved files. Sample index is available in variable ``ind``.
         start_ind: Index where file numbering starts.
         verbose: Whether to print output information.
     """
@@ -449,7 +452,8 @@ def make_box_borders(shape: Tuple[int, int], res: Tuple[float, float], z_range: 
         res: Grid xy pixel resolution in Ångströms.
         z_range: Grid z start and end coordinates in Ångströms.
 
-    Returns: Box start and end coordinates in the form ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
+    Returns:
+        Box start and end coordinates in the form ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
     """
     # fmt:off
     box_borders = np.array([

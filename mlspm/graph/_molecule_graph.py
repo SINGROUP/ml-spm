@@ -13,9 +13,10 @@ class Atom:
 
     Arguments:
         xyz: The xyz position of the atom.
-        element: The element of the atom. Either atomic number of chemical symbol.
-        q: float. The charge of the atom.
-        classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
+        element: The element of the atom. Either atomic number or chemical symbol.
+        q: The charge of the atom.
+        classes: Classes for categorizing atom based on their chemical elements. Each class is a list of elements either
+            as atomic numbers or as chemical symbols.
         class_weights: List of weights or one-hot vector for classes. The weights must sum to unity.
 
     Note: only one of **classes** and **class_weights** can be specified at the same time.
@@ -72,7 +73,7 @@ class Atom:
         self, xyz: bool = False, q: bool = False, element: bool = False, class_index: bool = False, class_weights: bool = False
     ) -> np.ndarray:
         """
-        Return an array representation of the atom in order [xyz, q, element, class_index, one_hot_class]
+        Return an array representation of the atom in order [xyz, q, element, class_index, one_hot_class].
 
         Arguments:
             xyz: Include xyz coordinates.
@@ -103,10 +104,12 @@ class MoleculeGraph:
     A class representing a molecule graph with atoms and bonds. The atoms are stored as a list of Atom objects.
 
     Arguments:
-        atoms: Molecule atom position and elements. If an np.ndarray, then must be of shape shape (num_atoms, 4), where
-            each row corresponds to one atom with [x, y, z, element].
-        bonds: Indices of bonded atoms. Each bond is a tuple with atom indices (bond_start, bond_end).
-        classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
+        atoms: Molecule atom position and elements. If an np.ndarray, then must be of shape ``(num_atoms, 4)``, where
+            each row corresponds to one atom with ``[x, y, z, element]``.
+        bonds: Indices of bonded atoms. Each bond is a tuple ``(bond_start, bond_end)`` with the indices of the atom that
+            the bond connects.
+        classes: Classes for categorizing atom based on their chemical elements. Each class is a list of elements either
+            as atomic numbers or as chemical symbols.
         class_weights: List of weights or one-hot vector for classes. The weights must sum to unity.
 
     Note: only one of **classes** and **class_weights** can be specified at the same time.
@@ -146,12 +149,12 @@ class MoleculeGraph:
             remove_inds: Indices of atoms to remove.
 
         Returns:
-            tuple (new_molecule, removed)
+            Tuple (**new_molecule**, **removed**), where
 
-            - new_molecule: New molecule graph where the atoms and bonds have been removed.
-            - removed: Removed atoms and bonds. Each list item is a tuple (atom, bonds) corresponding to one of the removed atoms.
-              The bonds are encoded as an indicator list where 0 indicates no bond and 1 indicates a bond with the atom at the
-              corresponding index in the new molecule.
+            - **new_molecule** - New molecule graph where the atoms and bonds have been removed.
+            - **removed** - Removed atoms and bonds. Each list item is a tuple ``(atom, bonds)`` corresponding to one of the
+              removed atoms. The bonds are encoded as an indicator list where 0 indicates no bond and 1 indicates a bond with
+              the atom at the corresponding index in the new molecule.
         """
 
         remove_inds = np.array(remove_inds, dtype=int)
@@ -249,7 +252,7 @@ class MoleculeGraph:
         Return the adjacency matrix of the graph.
 
         Returns:
-            Adjacency matrix of shape (n_atoms, n_atoms), where the presence of bonds between pairs of atoms are
+            Adjacency matrix of shape ``(n_atoms, n_atoms)``, where the presence of bonds between pairs of atoms are
             indicated by binary values.
 
         """
@@ -315,7 +318,7 @@ class MoleculeGraph:
 
         Arguments:
             box_borders: Real-space extent of the region outside of which atoms are deleted. The array should be of the form
-                ((x_start, y_start, z_start), (x_end, y_end, z_end)).
+                ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
 
         Returns:
             A new molecule graph without the deleted atoms.
@@ -336,7 +339,7 @@ class MoleculeGraph:
 
     def randomize_positions(self, sigma: Tuple[int, int, int] = (0.2, 0.2, 0.1)) -> Self:
         """
-        Randomly displace atom positions according to a gaussian distribution.
+        Randomly displace atom positions according to a Gaussian distribution.
 
         Arguments:
             sigma: Standard deviations for displacement in x, y, and z directions in Ångstroms.

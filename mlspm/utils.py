@@ -275,7 +275,7 @@ def load_checkpoint(
                     print(f"Updated data for `{key}`")
 
 
-def read_xyzs(file_paths: list[str], return_comment: bool = False):
+def read_xyzs(file_paths: list[str], return_comment: bool = False) -> list[np.ndarray]:
     """
     Read molecule xyz files.
 
@@ -283,8 +283,9 @@ def read_xyzs(file_paths: list[str], return_comment: bool = False):
         file_paths: Paths to xyz files
         return_comment: If True, also return the comment string on second line of file.
 
-    Returns: list of np.array of shape (num_atoms, 4) or (num_atoms, 5). Each row
-        corresponds to one atom with [x, y, z, element] or [x, y, z, charge, element].
+    Returns:
+        Arrays of shape ``(num_atoms, 4)`` or ``(num_atoms, 5)``. Each row in the arrays corresponds to one atom
+        with ``[x, y, z, element]`` or ``[x, y, z, charge, element]``.
     """
     mols = []
     comments = []
@@ -351,6 +352,7 @@ def batch_write_xyzs(xyzs: list[np.ndarray], outdir: str = "./", start_ind: int 
 def count_parameters(module: torch.nn.Module) -> int:
     """
     Count trainable parameters in a Pytorch module.
+    
     Arguments:
         module: Pytorch module.
     """

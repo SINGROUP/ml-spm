@@ -84,8 +84,8 @@ class Conv2dBlock(_ConvNdBlock):
         out_channels: Number of output channels in each layer of the block.
         kernel_size: Size of convolution kernel.
         depth: Number of convolution layers in the block.
-        padding_mode: str. Type of padding in each convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
-        res_connection: Whether to use residual connection over the block (f(x) = h(x) + x). If in_channels != out_channels,
+        padding_mode: Type of padding in each convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
+        res_connection: Whether to use residual connection over the block (``f(x) = h(x) + x``). If ``in_channels != out_channels``,
             a 1x1x1 convolution is applied to the res connection to make the channel numbers match.
         activation: Activation function to use after every layer in block. If None, defaults to ReLU.
         last_activation: Whether to apply the activation after the last conv layer (before res connection).
@@ -95,7 +95,7 @@ class Conv2dBlock(_ConvNdBlock):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: int | Tuple[int, int, int] = 3,
+        kernel_size: int | Tuple[int, int] = 3,
         depth: int = 2,
         padding_mode: int = "zeros",
         res_connection: bool = True,
@@ -114,8 +114,8 @@ class Conv3dBlock(_ConvNdBlock):
         out_channels: Number of output channels in each layer of the block.
         kernel_size: Size of convolution kernel.
         depth: Number of convolution layers in the block.
-        padding_mode: Type of padding in each convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
-        res_connection: Whether to use residual connection over the block (f(x) = h(x) + x). If in_channels != out_channels,
+        padding_mode: Type of padding in each convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
+        res_connection: Whether to use residual connection over the block (``f(x) = h(x) + x``). If ``in_channels != out_channels``,
             a 1x1x1 convolution is applied to the res connection to make the channel numbers match.
         activation: Activation function to use after every layer in block. If None, defaults to ReLU.
         last_activation: Whether to apply the activation after the last conv layer (before res connection).
@@ -125,7 +125,7 @@ class Conv3dBlock(_ConvNdBlock):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: int | Tuple[int, int] = 3,
+        kernel_size: int | Tuple[int, int, int] = 3,
         depth: int = 2,
         padding_mode: int = "zeros",
         res_connection: bool = True,
@@ -144,14 +144,14 @@ class UNetAttentionConv(nn.Module):
         query_channels: Number of channels in query feature map.
         attention_channels: Number of channels in hidden convolution layer before computing attention.
         kernel_size: Size of convolution kernel.
-        padding_mode: Type of padding in each convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
-        conv_activation: Activation function to use after convolution layers
-        attention_activation: Type of activation to use for attention map. 'sigmoid' or 'softmax'.
-        upsample_mode: Algorithm for upsampling query feature map to the attended feature map size. See torch.nn.functional.interpolate.
-        ndim: 2 or 3. Dimensionality of convolution.
+        padding_mode: Type of padding in each convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
+        conv_activation: Activation function to use after convolution layers.
+        attention_activation: Type of activation to use for the attention map. ``'sigmoid'`` or ``'softmax'``.
+        upsample_mode: Algorithm for upsampling query feature map to the attended feature map size.
+            See :func:`torch.nn.functional.interpolate`.
+        ndim: Dimensionality of convolution. 2 or 3.
 
-    References:
-        https://arxiv.org/abs/1804.03999
+    Reference: https://arxiv.org/abs/1804.03999
     """
 
     def __init__(
@@ -224,7 +224,7 @@ class AttentionConvZ(nn.Module):
         z_out: Size of z dimension in output feature map.
         kernel_size: Convolution kernel size.
         conv_depth: Convolution block depth.
-        padding_mode: Type of padding in convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
+        padding_mode: Type of padding in convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
     """
 
     def __init__(

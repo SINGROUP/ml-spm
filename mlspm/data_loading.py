@@ -24,12 +24,12 @@ class ShardList(wds.shardlists.IterableDataset):
     splits the urls by rank. The filling is done by randomly doubling elements in the url list.
 
     Additionally, can yield random parameters sets for the same shard, using the
-    pattern *K-{num}* in the files names, substituting different numbers for num.
+    pattern ``*K-{num}*`` in the files names, substituting different numbers for *num*.
 
     Arguments:
-        urls: A list of URLs as a Python list or brace notation string.
+        urls: URLs as a list or brace notation string.
         base_path: The URL paths are relative to this path. Leave empty to use absolute paths.
-        world_size: Number of parallel processes over which the urls are split.
+        world_size: Number of parallel processes over which the URLs are split.
         substitute_param: Split shards into parameter sets and yield random parameter set for each shard.
         log: If not None, path to a file where the yielded shard urls are logged.
     """
@@ -117,10 +117,17 @@ def decode_xyz(key: str, data: Any) -> Tuple[np.ndarray, np.ndarray] | Tuple[Non
     Webdataset pipeline function for decoding xyz files.
 
     Arguments:
-        key: Stream value key. If this is '.xyz', then it is decoded.
+        key: Stream value key. If the key is ``'.xyz'``, then the data is decoded.
         data: Data to decode.
 
-    Returns: tuple with the decoded xyz data and scan window.
+    Returns:
+        Tuple (**xyz**, **scan_window**), where
+
+        - **xyz** - Decoded atom coordinates and elements as an array where each row is of the form ``[x, y, z, element]``.
+        - **scan_window** - The xyz coordinates of the opposite corners of the scan window in the form
+          ``((x_start, y_start, z_start), (x_end, y_end, z_end))``
+
+        If the stream key did not match, the tuple is ``(None, None)`` instead.
     """
     if key == ".xyz":
         data = io.BytesIO(data)
@@ -145,17 +152,18 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
     Process the comment line in a .xyz file and extract the bounding box of the scan.
     The comment either has the format (QUAM dataset)
 
-        Lattice="x0 x1 x2 y0 y1 y2 z0 z1 z2"
+        ``Lattice="x0 x1 x2 y0 y1 y2 z0 z1 z2"``
 
     where the lattice is assumed to be orthogonal and origin at zero, or
 
-        Scan window: [[x_start y_start z_start], [x_end y_end z_end]]
+        ``Scan window: [[x_start y_start z_start], [x_end y_end z_end]]``
 
     Arguments:
         comment: Comment to parse.
 
     Returns:
-        The xyz coordinates of the opposite corners of the scan window in the form ((x_start, y_start, z_start), (x_end, y_end, z_end))
+        The xyz coordinates of the opposite corners of the scan window in the form
+            ``((x_start, y_start, z_start), (x_end, y_end, z_end))``
     """
     comment = comment.lower()
     match = re.match('.*lattice="((?:[+-]?(?:[0-9]*\.)?[0-9]+\s?){9})"', comment)
@@ -178,17 +186,19 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
 
 def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[dict, None, None]:
     """
-    Take a sample in dict format and update it with fields containing an image stack,
-    xyz coordinates and scan window. Rotate the images to be xy-indexing convention and
-    stack them into a single array.
+    Take a sample in dict format and update it with fields containing an image stack, xyz coordinates and scan window.
+    Rotate the images to be xy-indexing convention and stack them into a single array.
 
     Arguments:
         src: Iterable of dicts with the fields:
-            {000..0xx}.jpg: PIL.Image.Image of one slice of the simulation.
-            xyz: tuple(np.array, np.array) of the xyz data and the scan window.
+
+            - ``'{000..0xx}.jpg'`` - :class:`PIL.Image.Image` of one slice of the simulation.
+            - ``'xyz'`` - Tuple(:class:`np.ndarray`, :class:`np.ndarray`) of the xyz data and the scan window.
+        
         reverse: Whether the order of the image stack is reversed.
 
-    Returns: Generator that yields sample dicts with the updated fields 'X', 'xyz', 'sw'.
+    Returns:
+        Generator that yields sample dicts with the updated fields ``'X'``, ``'xyz'``, ``'sw'``.
     """
     for sample in src:
         X, xyz, sw = [], None, None
@@ -213,7 +223,7 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[di
 
 
 rotate_and_stack = wds.pipelinefilter(_rotate_and_stack)
-
+"""Webdataset pipeline filter for :func:`_rotate_and_stack`"""
 
 def _collate_batch(batch: Iterable[dict]):
     Xs, xyzs, sws, keys, urls = [[b[k] for b in batch] for k in ["X", "xyz", "sw", "__key__", "__url__"]]
@@ -230,7 +240,7 @@ def _collate_batch(batch: Iterable[dict]):
 
 
 def batched(batch_size: int):
-    """Wrapper for wds.batched with a suitable collation function."""
+    """Wrapper for :func:`webdataset.batched` with a suitable collation function."""
     return wds.batched(batch_size, _collate_batch)
 
 

@@ -14,18 +14,22 @@ def collate_graph(
     Collate graph samples into a batch.
 
     Arguments:
-        batch: tuple (X, mols, xyz), where
-            X: Input AFM image. Array of shape (batch_size, x, y, z).
-            mols: Input molecules.
-            xyz: List of original molecules. Arrays of shape (num_atoms, 5).
+        batch:
+            Tuple (**X**, **mols**, **xyz**), where
 
-    Returns: tuple (X, pos, node_classes, edges, mols, xyz)
-        X: Input AFM images.
-        pos: Graph node xyz coordinates.
-        node_classes: Graph node class indices.
-        edges: Graph edge indices.
-        mols: Input molecules. Unchanged from input argument.
-        xyz: List of original molecules. Unchanged from input argument.
+            - **X** - Input AFM image. Array of shape ``(batch_size, x, y, z)``.
+            - **mols** - Input molecules.
+            - **xyz** - List of original molecules. Arrays of shape ``(n_atoms, 5)``.
+
+    Returns:
+        Tuple (**X**, **pos**, **node_classes**, **edges**, **mols**, **xyz**), where
+        
+        - **X** - Input AFM images.
+        - **pos** - Graph node xyz coordinates.
+        - **node_classes** - Graph node class indices.
+        - **edges** - Graph edge indices.
+        - **mols** - Input molecules. Unchanged from input argument.
+        - **xyz** - List of original molecules. Unchanged from input argument.
     """
     X, mols, xyz = batch
     pos = []
