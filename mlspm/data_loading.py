@@ -189,12 +189,14 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[di
     Take a sample in dict format and update it with fields containing an image stack, xyz coordinates and scan window.
     Rotate the images to be xy-indexing convention and stack them into a single array.
 
+    Likely you don't want to use this function directly, but the wrapper :data:`.rotate_and_stack`.
+
     Arguments:
         src: Iterable of dicts with the fields:
 
             - ``'{000..0xx}.jpg'`` - :class:`PIL.Image.Image` of one slice of the simulation.
             - ``'xyz'`` - Tuple(:class:`np.ndarray`, :class:`np.ndarray`) of the xyz data and the scan window.
-        
+
         reverse: Whether the order of the image stack is reversed.
 
     Returns:
@@ -225,33 +227,72 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[di
 rotate_and_stack = wds.pipelinefilter(_rotate_and_stack)
 """Webdataset pipeline filter for :func:`_rotate_and_stack`"""
 
+
 def _collate_batch(batch: Iterable[dict]):
-    Xs, xyzs, sws, keys, urls = [[b[k] for b in batch] for k in ["X", "xyz", "sw", "__key__", "__url__"]]
-    Ys = [b.get("Y", []) for b in batch]
+    samples = {}
+    for b in batch:
+        for key, val in b.items():
+            if key in samples:
+                samples[key].append(val)
+            else:
+                samples[key] = [val]
+
+    Xs = samples["X"]
+    Ys = samples.get("Y", [])
+    sws = samples["sw"]
 
     Xs = list(np.stack(Xs, axis=0).transpose(1, 0, 2, 3, 4))
-    if len(Ys[0]) > 0:
+    if len(Ys) > 0:
         Ys = list(np.stack(Ys, axis=0).transpose(1, 0, 2, 3))
     sws = list(np.stack(sws, axis=0).transpose(1, 0, 2, 3))
 
-    sample = {"X": Xs, "Y": Ys, "xyz": xyzs, "sw": sws, "__key__": keys, "__url__": urls}
+    samples["X"] = Xs
+    samples["Y"] = Ys
+    samples["sw"] = sws
 
-    return sample
+    return samples
 
 
-def batched(batch_size: int):
-    """Wrapper for :func:`webdataset.batched` with a suitable collation function."""
+def batched(batch_size: int) -> wds.filters.RestCurried:
+    """
+    Wrapper for :func:`webdataset.batched` with a suitable collation function.
+
+    The collation function takes collections of sample dictionaries with the following keys and collects them into batched sample
+    dictionaries with the same keys:
+
+    - ``'X'`` - AFM images.
+    - ``'sw'`` - Scan windows that determine the real-space extent of the AFM image region.
+    - ``'Ys'`` - (Optional) Auxiliary image descriptors corresponding to the AFM images.
+
+    Rest of the keys in the dictionary are simply gathered into lists.
+    """
     return wds.batched(batch_size, _collate_batch)
 
 
-def default_collate(batch):
+def default_collate(batch: Tuple[np.ndarray, ...]) -> Tuple[torch.Tensor, ...]:
+    """
+    Transfer a batch of Numpy arrays into Pytorch tensors.
+
+    Arguments:
+        batch: Should contain at least two arrays (``X``, ``Y``, ...), where ``X`` are AFM images and ``Y`` are image descriptors.
+
+    Returns:
+        Tuple (``X``, ``Y``, ...), where the ``X`` and ``Y`` are the AFM images and image descriptors as tensors, and the rest of
+        the elements are passed through unchanged.
+    """
     X, Y, *rest = batch
     X = [torch.from_numpy(x).unsqueeze(1).float() for x in X]
     Y = [torch.from_numpy(y).float() for y in Y]
     return X, Y, *rest
 
 
-def worker_init_fn(worker_id):
+def worker_init_fn(worker_id: int):
+    """
+    Initialize each worker with a unique random seed based on it's ID and current time.
+
+    Arguments:
+        worker_id: ID of the worker process.
+    """
     seed = int((time.time() % 1e5) * 1000) + worker_id
     np.random.seed(seed)
     random.seed(seed)
