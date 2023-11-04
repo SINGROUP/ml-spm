@@ -208,7 +208,7 @@ class LossLogPlot:
         if self.stream is not sys.stdout:
             self.stream.close()
 
-    def _init_log(self, init_epoch):
+    def _init_log(self, init_epoch: Optional[int]):
         log_exists = os.path.isfile(self.log_path)
         if self.world_size > 1:
             dist.barrier()
@@ -261,7 +261,7 @@ class LossLogPlot:
                     f.write(f";{l}")
                 f.write("\n")
 
-    def _add_loss(self, losses, mode="train"):
+    def _add_loss(self, losses: torch.Tensor | np.ndarray | float | list[float], mode: str="train"):
         synced_loss = self._synced_losses[mode]
         losses = synced_loss.append(losses)
         if len(losses) != len(self.loss_labels):
@@ -269,7 +269,7 @@ class LossLogPlot:
         if self.global_rank == 0 and len(synced_loss) % self.print_interval == 0:
             self._print_losses(mode)
 
-    def _print_losses(self, mode="train"):
+    def _print_losses(self, mode: str = "train"):
         if self.global_rank > 0:
             return
         synced_loss = self._synced_losses[mode]

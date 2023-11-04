@@ -51,7 +51,7 @@ def make_input_plots(
     Arguments:
         Xs: Input AFM images to plot. Each list element corresponds to one AFM tip and is an array of shape ``(batch, x, y, z)``.
         outdir: Directory where images are saved.
-        start_ind: Save index increments by one for each image. The first index is start_ind.
+        start_ind: Starting index for file naming.
         constant_range: Whether the different slices should use the same value range or not.
         cmap: Colormap to use for plotting.
         verbose: Whether to print output information.

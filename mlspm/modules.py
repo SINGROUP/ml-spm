@@ -139,6 +139,19 @@ class UNetAttentionConv(nn.Module):
     """
     Pytorch attention layer for U-net model upsampling stage.
 
+    Given the input feature map :math:`x`, and query feature map :math:`q`, performs the computation
+
+    .. math::
+
+        q' &= \sigma(f_\mathrm{q}(\mathrm{Interp}(q))) \\\\
+        x' &= \sigma(f_\mathrm{x}(x)) \\\\
+        a  &= \sigma'(f_\mathrm{a}(\sigma(x'+ q'))) \\\\
+        y  &= x \odot a,
+
+    where :math:`f_\mathrm{\{q, x, a\}}` are convolution layers, :math:`\mathrm{Interp}(q)` denotes an interpolation of
+    :math:`q` to match the size of :math:`x`, :math:`\sigma` and :math:`\sigma'` are activation functions corresponding
+    to **conv_activation** and **attention_activation**, and :math:`\odot` denotes an element-wise multiplication.
+
     Arguments:
         in_channels: Number of channels in the attended feature map.
         query_channels: Number of channels in query feature map.
@@ -200,28 +213,53 @@ class UNetAttentionConv(nn.Module):
         return self.sigmoid(a)
 
     def forward(self, x: torch.Tensor, q: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Perform the forward computation.
+
+        Arguments:
+            x: Input feature map.
+            q: Query feature map.
+
+        Returns
+            Tuple (**y**, **a**), where
+
+            - **y** - Attention-multiplied output feature map.
+            - **a** - Attention map.
+        """
         # Upsample query q to the size of input x and convolve
-        q = F.interpolate(q, size=x.size()[2:], mode=self.upsample_mode, align_corners=False)
-        q = self.conv_activation(self.q_conv(q))
+        qp = F.interpolate(q, size=x.size()[2:], mode=self.upsample_mode, align_corners=False)
+        qp = self.conv_activation(self.q_conv(qp))
 
-        # Convolve input x and sum with q
-        a = self.conv_activation(self.x_conv(x))
-        a = self.conv_activation(a + q)
+        # Convolve input x
+        xp = self.conv_activation(self.x_conv(x))
 
-        # Get attention map and mix it with x
+        # Get attention map
+        a = self.conv_activation(xp + qp)
         a = self.attention_activation(self.a_conv(a))
-        x = a * x
 
-        return x, a.squeeze(dim=1)
+        # Mix the attention map with x
+        y = a * x
+
+        return y, a.squeeze(dim=1)
 
 
 class AttentionConvZ(nn.Module):
     """
     Reduce and expand 3D feature map in z direction by an attention convolution.
 
+    Performs the computation
+
+    .. math::
+
+        y_{k'} = \sum_{k=1}^{K} \sigma(f_{k'}(x))_k \odot x_k \quad ,
+
+    where :math:`\sigma` is the sigmoid function, :math:`f_{k'}` are convolution blocks, and :math:`\odot` denotes an element-wise
+    multiplication. The sum is over the z-dimension of the input feature map :math:`x`, and :math:`k' \in \{1...K'\}` represents
+    the z-index of the output feature map :math:`y`, which has a total z-size of :math:`K'`.
+
     Arguments:
-        in_channels: Number of channels in input.
-        z_out: Size of z dimension in output feature map.
+        in_channels: Number of channels in input feature map.
+        z_out: Size of z dimension in output feature map (= :math:`K'`).
         kernel_size: Convolution kernel size.
         conv_depth: Convolution block depth.
         padding_mode: Type of padding in convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
@@ -253,6 +291,15 @@ class AttentionConvZ(nn.Module):
         self.act = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Perform the forward computation.
+
+        Arguments:
+            x: Input feature map.
+
+        Returns
+            Output feature map with adjusted z-size.
+        """
         xs = []
 
         for conv in self.convs:

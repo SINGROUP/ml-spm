@@ -11,7 +11,7 @@ from . import MoleculeGraph
 CLASS_COLORS = "rkbgcmy"
 
 
-def plot_graphs(  # TODO docstring
+def plot_graphs(
     pred: Optional[list[MoleculeGraph]] = None,
     ref: Optional[list[MoleculeGraph]] = None,
     box_borders: np.ndarray = np.array(((0, 0, -1.4), (16, 16, 0.5))),
@@ -21,6 +21,21 @@ def plot_graphs(  # TODO docstring
     start_ind: int = 0,
     verbose: int = 1,
 ):
+    """
+    Plot batch of graphs into files 0_graph.png, 1_graph.png, ... etc.
+
+    Arguments:
+        pred: Predicted molecule graphs.
+        ref: Reference molecule graphs.
+        box_borders: Real-space extent of the plotting region in Ångströms. The array should be of the form
+            ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
+        outdir: Directory where files are saved.
+        classes: Classes for categorizing atoms based on their chemical elements. Each class is a list of elements either
+            as atomic numbers or as chemical symbols.
+        class_colors: Colors for each atom class.
+        start_ind: Starting index for file naming.
+        verbose: Whether to print output information.
+    """
     n_plot = (pred is not None) + (ref is not None)
     if n_plot == 0:
         raise ValueError("pred and ref cannot both be None.")
@@ -167,6 +182,22 @@ def plot_distribution_grid(
     start_ind: int = 0,
     verbose: int = 1,
 ):
+    """
+    Plot batch of position distribution grids into files 0_pred_dist.png, 1_pred_dist.png, ..., and 0_pred_dist2D.png
+    1_pred_dist2D.png, ... etc.
+
+    The full grids are divided into separate images for each z-slice in the arrays. The 2D grids are averaged over the
+    z-dimension of the full grids.
+
+    Arguments:
+        pred_dist: Predicted position distribution grid.
+        ref_dist: Reference position distribution grid.
+        box_borders: Real-space extent of the distribution grid region in Ångströms. The array should be of the form
+            ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
+        outdir: Directory where files are saved.
+        start_ind: Starting index for file naming.
+        verbose: Whether to print output information.
+    """
     if ref_dist is not None:
         assert pred_dist.shape == ref_dist.shape, (pred_dist.shape, ref_dist.shape)
 

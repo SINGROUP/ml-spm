@@ -15,7 +15,7 @@ class Atom:
         xyz: The xyz position of the atom.
         element: The element of the atom. Either atomic number or chemical symbol.
         q: The charge of the atom.
-        classes: Classes for categorizing atom based on their chemical elements. Each class is a list of elements either
+        classes: Classes for categorizing atoms based on their chemical elements. Each class is a list of elements either
             as atomic numbers or as chemical symbols.
         class_weights: List of weights or one-hot vector for classes. The weights must sum to unity.
 

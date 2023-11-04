@@ -136,11 +136,11 @@ def find_gaussian_peaks(
 
     Arguments:
         pos_dist: Position distribution array. Should be of shape ``(n_batch, nx, ny, nz)``.
-        box_borders: Real-space extent of the distribution grid in angstroms. The array should be of the form
+        box_borders: Real-space extent of the distribution grid in Ångströms. The array should be of the form
             ``((x_start, y_start, z_start), (x_end, y_end, z_end))``.
         match_threshold: Detection threshold for matching. Regions above the threshold are chosen for method ``'zncc'``,
             and regions below the threshold are chosen for methods ``'mad'``, ``'msd'``, ``'mad_norm'``, and ``'msd_norm'``.
-        std: Standard deviation of peaks to search for in angstroms.
+        std: Standard deviation of peaks to search for in Ångströms.
         method: Matching method to use. Either zero-normalized cross correlation (``'zncc'``), mean absolute distance (``'mad'``),
             mean squared distance (``'msd'``), or the normalized version of the latter two (``'mad_norm'``, ``'msd_norm'``).
 
@@ -377,7 +377,7 @@ def crop_graph(
         size: Size of cropped region in x and y directions.
         box_borders: Real-space extent of the AFM image region in Ångströms. The array should be of the form
             ``((x_start, y_start, ...), (x_end, y_end, ...))``.
-        new_start: The start coordinates of the cropped region in angstroms.
+        new_start: The start coordinates of the cropped region in Ångströms.
 
     Returns:
         Tuple (**X**, **mols**, **box_borders**), where
