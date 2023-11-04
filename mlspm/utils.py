@@ -1,7 +1,7 @@
 import glob
 import os
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -65,7 +65,7 @@ elements = [
 ]
 
 
-def _calc_plot_dim(n, f=0.3):
+def _calc_plot_dim(n: int, f: float = 0.3):
     rows = max(int(np.sqrt(n) - f), 1)
     cols = 1
     while rows * cols < n:
@@ -73,7 +73,7 @@ def _calc_plot_dim(n, f=0.3):
     return rows, cols
 
 
-def _get_distributed():
+def _get_distributed() -> Tuple[int, int, int, Optional[dist.ProcessGroup]]:
     try:
         if "RANK" in os.environ and "LOCAL_RANK" in os.environ and "WORLD_SIZE" in os.environ:
             world_size = int(os.environ["WORLD_SIZE"])
@@ -91,7 +91,8 @@ def _get_distributed():
         local_rank = global_rank = 0
     return world_size, local_rank, global_rank, group
 
-def _print_progress(block_num, block_size, total_size):
+
+def _print_progress(block_num: int, block_size: int, total_size: int):
     if total_size == -1:
         return
     delta = block_size / total_size * 100
@@ -107,6 +108,7 @@ def _print_progress(block_num, block_size, total_size):
         print(f"{percent_int:2d}%", end="", flush=True)
     else:
         print("Done")
+
 
 class Checkpointer:
     """
@@ -166,7 +168,12 @@ class Checkpointer:
         self.epoch += 1
 
     def next_epoch(self, loss: float):
-        """Advance epoch and save state if loss improved."""
+        """
+        Advance epoch and save state if loss improved.
+
+        Arguments:
+            loss: Loss value for the current epoch.
+        """
         if self.global_rank == 0:
             improved = loss < self.best_loss
             prev_best_epoch = self.best_epoch
@@ -208,7 +215,6 @@ def save_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer, ep
         save_dir: Directory to save in.
         additional_data: A dictionary of additional modules or data to save to the checkpoint.
     """
-    import torch
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -275,7 +281,7 @@ def load_checkpoint(
                     print(f"Updated data for `{key}`")
 
 
-def read_xyzs(file_paths: list[str], return_comment: bool = False):
+def read_xyzs(file_paths: list[str], return_comment: bool = False) -> list[np.ndarray]:
     """
     Read molecule xyz files.
 
@@ -283,8 +289,9 @@ def read_xyzs(file_paths: list[str], return_comment: bool = False):
         file_paths: Paths to xyz files
         return_comment: If True, also return the comment string on second line of file.
 
-    Returns: list of np.array of shape (num_atoms, 4) or (num_atoms, 5). Each row
-        corresponds to one atom with [x, y, z, element] or [x, y, z, charge, element].
+    Returns:
+        Arrays of shape ``(num_atoms, 4)`` or ``(num_atoms, 5)``. Each row in the arrays corresponds to one atom
+        with ``[x, y, z, element]`` or ``[x, y, z, charge, element]``.
     """
     mols = []
     comments = []
@@ -351,6 +358,7 @@ def batch_write_xyzs(xyzs: list[np.ndarray], outdir: str = "./", start_ind: int 
 def count_parameters(module: torch.nn.Module) -> int:
     """
     Count trainable parameters in a Pytorch module.
+
     Arguments:
         module: Pytorch module.
     """

@@ -9,9 +9,15 @@ from ..utils import elements
 from ._molecule_graph import MoleculeGraph
 
 
-class GraphStats:  # TODO docstrings
+class GraphStats:
     """
-    Gather statistics on graph predictions.
+    Gather statistics on graph predictions divided into bins based on the graph sizes.
+
+    Arguments:
+        classes: Classes for categorizing atom based on their chemical elements. Each class is a list of elements either
+            as atomic numbers or as chemical symbols.
+        dist_threshold: Distance threshold for considering atoms as matching between prediction and reference.
+        bin_size: Bin size for graph sizes. The samples are divided into bins based on the number of nodes in the graphs.
     """
 
     def __init__(self, classes: list[list[int]], dist_threshold: float = 0.35, bin_size: int = 4):
@@ -31,36 +37,93 @@ class GraphStats:  # TODO docstrings
         self.dist_threshold = dist_threshold
 
     @property
-    def largest_graph(self):
+    def largest_graph(self) -> int:
+        """Size of the largest graph seen in all batches."""
         return max(self.graph_sizes())
 
     @property
-    def total_nodes(self):
+    def total_nodes(self) -> int:
+        """Total number of nodes seen in graphs all batches."""
         return sum(self.graph_sizes())
 
     @property
-    def total_samples(self):
+    def total_samples(self) -> int:
+        """Total number of samples seen in all batches."""
         return len(self.graph_sizes())
 
-    def conf_mat_node(self, size_bin=-1):
+    def conf_mat_node(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the confusion matrix for node classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Confusion matrix of predicted vs reference node classes.
+        """
         return np.sum(self._conf_mat_node, axis=0) if size_bin < 0 else self._conf_mat_node[size_bin]
 
-    def conf_mat_edge(self, size_bin=-1):
+    def conf_mat_edge(self, size_bin: int = -1):
+        """
+        Get the confusion matrix for edge classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Confusion matrix of predicted vs reference edge classes.
+        """
         return np.sum(self._conf_mat_edge, axis=0) if size_bin < 0 else self._conf_mat_edge[size_bin]
 
-    def edge_precision(self, size_bin=-1):
+    def edge_precision(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the precision for edge classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Edge classification precision for every class.
+        """
         conf_mat = self.conf_mat_edge(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=0)
 
-    def edge_recall(self, size_bin=-1):
+    def edge_recall(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the recall for edge classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Edge classification recall for every class.
+        """
         conf_mat = self.conf_mat_edge(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=1)
 
-    def node_precision(self, size_bin=-1):
+    def node_precision(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the precision for node classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Node classification precision for every class.
+        """
         conf_mat = self.conf_mat_node(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=0)
 
-    def node_recall(self, size_bin=-1):
+    def node_recall(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the precision for node classification.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins.
+
+        Returns:
+            Node classification recall for every class.
+        """
         conf_mat = self.conf_mat_node(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=1)
 
@@ -68,28 +131,93 @@ class GraphStats:  # TODO docstrings
         arrays = [np.array(a) for a in arrays]
         return np.concatenate(arrays, axis=0) if size_bin < 0 else arrays[size_bin]
 
-    def graph_sizes(self, size_bin=-1):
+    def graph_sizes(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of graph sizes.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of graph sizes.
+        """
         return self._get_array(self._graph_sizes, size_bin)
 
-    def node_count_diffs(self, size_bin=-1):
+    def node_count_diffs(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of differences in node counts between predictions and references.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of node count differences.
+        """
         return self._get_array(self._node_count_diffs, size_bin)
 
-    def bond_count_diffs(self, size_bin=-1):
+    def bond_count_diffs(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of differences in edge counts between predictions and references.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of edge count differences.
+        """
         return self._get_array(self._bond_count_diffs, size_bin)
 
-    def hausdorff_distances(self, size_bin=-1):
+    def hausdorff_distances(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of Hausdorff distances between predictions and references.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of Hausdorff distances.
+        """
         return self._get_array(self._hausdorff_distances, size_bin)
 
-    def matching_distances(self, size_bin=-1):
+    def matching_distances(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of matching distances between predictions and references. The matching distance
+        is the distance between a pair of nodes in the prediction and reference that were within the set
+        threshold distance.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of matching distances.
+        """
         return self._get_array(self._matching_distances, size_bin)
 
-    def missing_nodes(self, size_bin=-1):
+    def missing_nodes(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of the number of missing nodes in predictions compared to references.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of missing node counts.
+        """
         return self._get_array(self._missing_nodes, size_bin)
 
-    def extra_nodes(self, size_bin=-1):
+    def extra_nodes(self, size_bin: int = -1) -> np.ndarray:
+        """
+        Get the full list of the number of extra nodes in predictions compared to references.
+
+        Arguments:
+            size_bin: Index of graph size bin. If negative, include all bins
+
+        Returns:
+            Array of extra node counts.
+        """
         return self._get_array(self._extra_nodes, size_bin)
 
-    def _check_bins(self, size_bin):
+    def _check_bins(self, size_bin: int):
         for _ in range(self.n_bins, size_bin + 1):
             self._graph_sizes.append([])
             self._node_count_diffs.append([])
@@ -170,7 +298,7 @@ class GraphStats:  # TODO docstrings
 
     def plot(self, outdir: str = "./", verbose: str = 1):
         """
-        Plot histograms of graph sizes, node/bond count differences, hausdorff distances, and maching distances,
+        Plot histograms of graph sizes, node/bond count differences, Hausdorff distances, and maching distances,
         and confusion matrices for node and edge classification.
 
         Arguments:
@@ -316,7 +444,7 @@ class GraphStats:  # TODO docstrings
 
     def report(self, outdir: str = "./", verbose: int = 1):
         """
-        Save to file mean absolute node/bond count diffs, mean hausdorff, mean matching distance, missing/extra atoms,
+        Save to file mean absolute node/bond count diffs, mean Hausdorff, mean matching distance, missing/extra atoms,
         total samples/nodes, average/largest graph size, and node/edge precision/recall.
 
         Arguments:

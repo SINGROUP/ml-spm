@@ -17,16 +17,18 @@ def download_weights(weights_name: str, target_path: Optional[PathLike] = None) 
     Download pretrained weights for models.
 
     The following weights are available:
-        - 'graph-ice-cu111': PosNet trained on ice clusters on Cu(111).
-        - 'graph-ice-au111-monolayer': PosNet trained on monolayer ice clusters on Au(111).
-        - 'graph-ice-au111-bilayer': PosNet trained on bilayer ice clusters on Au(111).
+
+        - ``'graph-ice-cu111'``: PosNet trained on ice clusters on Cu(111).
+        - ``'graph-ice-au111-monolayer'``: PosNet trained on monolayer ice clusters on Au(111).
+        - ``'graph-ice-au111-bilayer'``: PosNet trained on bilayer ice clusters on Au(111).
 
     Arguments:
         weights_name: Name of weights to download.
         target_path: Path where the weights file will be saved. If specified, the parent directory for the file has to exists.
             If not specified, a location in cache directory is chosen. If the target file already exists, the download is skipped
 
-    Returns: path where the weights were saved.
+    Returns:
+        Path where the weights were saved.
 
     """
     try:

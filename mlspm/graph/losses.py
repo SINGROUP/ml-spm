@@ -1,8 +1,17 @@
+from typing import Tuple
 import torch
 from torch import nn
 
 
-class GraphLoss(nn.Module):  # TODO docstring
+class GraphLoss(nn.Module):
+    """
+    Loss that compares two graphs.
+
+    Arguments:
+        node_factor: Weight for node classification loss.
+        edge_factor: Weight for edge classification loss.
+    """
+
     def __init__(self, node_factor: float = 1.0, edge_factor: float = 1.0):
         super().__init__()
         self.node_factor = node_factor
@@ -10,7 +19,25 @@ class GraphLoss(nn.Module):  # TODO docstring
         self.cross_entropy = nn.CrossEntropyLoss(reduction="mean")
         self.bce = nn.BCELoss(reduction="none")
 
-    def forward(self, pred, ref, separate_loss_factors=False):
+    def forward(
+        self,
+        pred: Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]],
+        ref: Tuple[list[torch.Tensor], list[torch.Tensor]],
+        separate_loss_factors=False,
+    ) -> torch.Tensor | list[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Arguments:
+            pred: Predicted graph batch as returned by :meth:`.GraphImgNet.forward`
+            ref: Reference graph batch. A tuple (**node_classes**, **edges**), where
+
+                - **node_classes** - Node classes as class index numbers. List of tensors of shape ``(n_atoms,)``.
+                - **edges** - Edges as pairs of node indices. List of tensors of shape ``(2, n_edges)``.
+            separate_loss_factors: Whether to return a single total loss or a separated list of values with each loss component.
+
+        Returns:
+            Computed loss value. Either a single value when ``separate_loss_factors==False``, or a list ``[total_loss,
+            node_loss, edge_loss]`` when ``separate_loss_factors==True``.
+        """
         node_classes_pred, edge_classes_pred, edges_pred = pred
         node_classes_ref, edges_ref = ref
 

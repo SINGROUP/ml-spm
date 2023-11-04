@@ -46,16 +46,17 @@ class PosNet(nn.Module):
         decode_block_depth2: Number of layers in each decoding 3D conv block after skip connection.
         attention_channels: Number of channels in conv layers within each attention block.
         res_connections: Whether to use residual connections in conv blocks.
-        activation: Activation to use after every layer. 'relu', 'lrelu', or 'elu' or nn.Module.
-        padding_mode: Type of padding in each convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
+        activation: Activation to use after every layer. ``'relu'``, ``'lrelu'``, or ``'elu'`` or :class:`nn.Module`.
+        padding_mode: Type of padding in each convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
+        pool_type: Type of pooling to use. ``'avg'`` or ``'max'``.
         decoder_z_sizes: Upscale sizes of decoder stages in the z dimension.
         z_outs: Size of the z-dimension after encoder and skip connections.
-        attention_activation: Type of activation to use for attention map. 'sigmoid' or 'softmax'.
+        attention_activation: Type of activation to use for attention map. ``'sigmoid'`` or ``'softmax'``.
         afm_res: Real-space size of pixels in xy-plane in input AFM images in angstroms.
-        grid_z_range: The real-space range in z-direction of the position grid in angstroms. Of the format (z_min, z_max).
+        grid_z_range: The real-space range in z-direction of the position grid in angstroms. Of the format ``(z_min, z_max)``.
         peak_std: Standard deviation of atom position grid peaks in angstroms.
         match_threshold: Detection threshold for matching when finding atom position peaks.
-        match_method: Method for template matching when finding atom position peaks. See .utils.find_gaussian_peaks for options.
+        match_method: Method for template matching when finding atom position peaks. See :func:`.find_gaussian_peaks` for options.
         device: Device to store model on.
     """
 
@@ -194,7 +195,17 @@ class PosNet(nn.Module):
         self.device = device
         self.to(device)
 
-    def forward(self, x: torch.Tensor, return_attention: bool = False) -> torch.Tensor | Tuple[torch.Tensor, list[torch.Tensor]]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, list[torch.Tensor]]:
+        """
+        Arguments:
+            x: Batch of AFM images. Should be of shape ``(n_batch, nx, ny, nz)```.
+
+        Returns:
+            Tuple (**pos_dist**, **attention_maps**), where
+
+            - **pos_dist** - Predicted atom position distribution.
+            - **attention_maps** - Attention maps from the skip connection attention layers.
+        """
         xs = []
         for i in range(self.num_blocks):
             # Apply 3D conv block
@@ -235,10 +246,7 @@ class PosNet(nn.Module):
         # Get output grid
         x = self.out_conv(x).squeeze(1)
 
-        if return_attention:
-            x = (x, attention_maps)
-
-        return x
+        return x, attention_maps
 
     def get_positions(
         self, x: torch.Tensor | np.ndarray, device: str = "cuda"
@@ -247,13 +255,13 @@ class PosNet(nn.Module):
         Predict atom positions for a batch of AFM images.
 
         Arguments:
-            x: Batch of AFM images. Should be of shape (nb, nx, ny, nz).
-            device: Device used when x is an np.ndarray.
+            x: Batch of AFM images. Should be of shape ``(n_batch, nx, ny, nz)``.
+            device: Device used when **x** is an np.ndarray.
 
         Returns:
             atom_pos: Atom positions for each batch item.
             grid: Atom position grid from PosNet prediction. Type matches input AFM image type
-            attention: Attention maps from attention layers. Type matches input AFM image type.
+            attention: Attention maps from skip-connection attention layers. Type matches input AFM image type.
         """
 
         if isinstance(x, np.ndarray):
@@ -262,7 +270,7 @@ class PosNet(nn.Module):
             xt = x
 
         with torch.no_grad():
-            xt, attention = self.forward(xt.unsqueeze(1), return_attention=True)
+            xt, attention = self(xt.unsqueeze(1))
 
         box_borders = make_box_borders(x.shape[1:3], (self.afm_res, self.afm_res), z_range=self.grid_z_range)
         atom_pos, _, _ = find_gaussian_peaks(
@@ -280,12 +288,12 @@ class PosNet(nn.Module):
         return atom_pos, xt, attention
 
 
-class GraphImgNet(nn.Module):  # TODO rest of docstrings
+class GraphImgNet(nn.Module):
     """
     Image-to-graph model that constructs a molecule graph out of atom positions and an AFM image.
 
     Arguments:
-        posnet: PosNet for predicting atom positions from an AFM image. Required when training or doing inference without
+        posnet: :class:`PosNet` for predicting atom positions from an AFM image. Required when training or doing inference without
             pre-defined atom positions.
         n_classes: Number of different classes for nodes.
         iters: Number of message passing iterations.
@@ -300,9 +308,9 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         node_out_hidden_size: Size of hidden layers in node classification MLP.
         edge_out_hidden_size: Size of hidden layers in edge classification MLP.
         res_connections: Whether to use residual connections in conv blocks.
-        activation: ('relu', 'lrelu', or 'elu') or nn.Module. Activation to use after every layer.
-        padding_mode: Type of padding in each convolution layer. 'zeros', 'reflect', 'replicate' or 'circular'.
-        pool_type: Type of pooling to use. 'avg' or 'max'.
+        activation: Activation to use after every layer. ``'relu'``, ``'lrelu'``, or ``'elu'`` or :class:`nn.Module`.
+        padding_mode: Type of padding in each convolution layer. ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``.
+        pool_type: Type of pooling to use. ``'avg'`` or ``'max'``.
         device: Device to store model on.
     """
 
@@ -406,7 +414,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         self.device = device
         self.to(device)
 
-    def _gather_afm(self, x, pos):
+    def _gather_afm(self, x: torch.Tensor, pos: list[torch.Tensor]) -> torch.Tensor:
         if sum([len(p) for p in pos]) == 0:
             # No atom positions, so just return an empty tensor
             print("Encountered an empty position list")
@@ -440,7 +448,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
 
         return torch.stack(x_afm, axis=0)
 
-    def _get_edges(self, pos):
+    def _get_edges(self, pos: list[torch.Tensor]) -> list[torch.Tensor]:
         edges = []
         for p in pos:
             d = F.pdist(p)
@@ -448,7 +456,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
             edges.append(torch.triu_indices(len(p), len(p), offset=1, device=self.device)[:, inds])
         return edges
 
-    def _combine_graphs(self, pos, edges):
+    def _combine_graphs(self, pos: list[torch.Tensor], edges: list[torch.Tensor]):
         Ns = []
         ind_count = 0
         edges_shifted = []
@@ -460,7 +468,29 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         pos = torch.cat(pos, axis=0)
         return edges_shifted, pos, Ns
 
-    def pred_to_graph(self, pos, node_classes, edge_classes, edges, bond_threshold):
+    def pred_to_graph(
+        self,
+        pos: list[torch.Tensor],
+        node_classes: list[torch.Tensor],
+        edge_classes: list[torch.Tensor],
+        edges: list[torch.Tensor],
+        bond_threshold: float,
+    ) -> list[MoleculeGraph]:
+        """
+        Convert predicted batch to a simple list of molecule graphs.
+
+        Arguments:
+            pos: Atom positions for each batch item.
+            node_classes: Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
+                of shape ``(n_atoms, n_classes)``.
+            edge_classes: Predicted probabilities for the existence of bonds between atoms indicated by **edges**. Eatch batch
+                item is a tensor of shape ``(n_edges,)``.
+            edges: Possible bond connection indices between atoms. Each batch item is a tensor of shape ``(2, n_edges)``.
+            bond_threshold: Threshold probability when an edge is considered a bond between atoms.
+
+        Returns:
+            Molecule graphs corresponding to the predictions.
+        """
         graphs = []
         for p, nc, e, ec in zip(pos, node_classes, edges, edge_classes):
             nc = F.softmax(nc, dim=1)
@@ -470,7 +500,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
             graphs.append(MoleculeGraph(atoms, bonds))
         return graphs
 
-    def encode_afm(self, x):
+    def encode_afm(self, x: torch.Tensor) -> torch.Tensor:
         if x.shape[0] == 0:
             return torch.zeros((0, self.node_feature_size), device=self.device)
 
@@ -491,7 +521,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
 
         return x
 
-    def mpnn(self, pos, node_features, edges):
+    def mpnn(self, pos: torch.Tensor, node_features: torch.Tensor, edges: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         Ne = 0 if edges.ndim < 2 else edges.size(1)  # Number of edges
 
         if Ne > 0:
@@ -511,7 +541,7 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         else:
             edge_features = torch.empty((0, self.node_feature_size), device=self.device)
 
-        for i in range(self.iters):
+        for _ in range(self.iters):
             a = torch.zeros(node_features.size(0), self.message_size, device=self.device)
             if Ne > 0:  # No messages if no edges
                 # Gather start and end nodes of edges
@@ -537,20 +567,20 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
     ) -> Tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor]]:
         """
         Arguments:
-            x: Batch of AFM images.
+            x: Batch of AFM images. Array of shape ``(n_batch, nx, ny, nz)``.
             pos: Atom positions for each batch item. If None, the positions are predicted from the AFM images.
-                The positions should be such that the lower left corner of the AFM image is at coordinate (0, 0),
+                The positions should be such that the lower left corner of the AFM image is at coordinate ``(0, 0)``,
                 and all positions are within the bounds of the AFM image. Model needs to be constructed with PosNet
                 defined in order for the position prediction to work.
 
         Returns:
-            Tuple (node, classes, edge_classes, edges), where
+            Tuple (**node_classes**, **edge_classes**, **edges**), where
 
-            - node_classes: Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
-              of shape (n_atoms, n_classes).
-            - edge_classes: Predicted probabilities for the existence of bonds between atoms indicated by edges. Eatch batch item
-              is a tensor of shape (n_edges,).
-            - edges: Possible bond connection indices between atoms. Each batch item is a tensor of shape (2, n_edges).
+            - **node_classes** - Predicted class probabilities for each atom in the molecule graphs. Each batch item is a tensor
+              of shape ``(n_atoms, n_classes)``.
+            - **edge_classes** - Predicted probabilities for the existence of bonds between atoms indicated by **edges**. Eatch batch
+              item is a tensor of shape ``(n_edges,)``.
+            - **edges** - Possible bond connection indices between atoms. Each batch item is a tensor of shape ``(2, n_edges)``.
         """
 
         assert x.ndim == 4, "Wrong number of dimensions in AFM tensor. Should be 4."
@@ -592,16 +622,18 @@ class GraphImgNet(nn.Module):  # TODO rest of docstrings
         Predict molecule graphs from AFM images.
 
         Arguments:
-            X: Batch of AFM images.
+            X: Batch of AFM images. Array of shape ``(n_batch, nx, ny, nz)``.
             pos: Atom positions for each batch item. If None, the positions are predicted from the AFM images.
-                The positions should be such that the lower left corner of the AFM image is at coordinate (0, 0),
+                The positions should be such that the lower left corner of the AFM image is at coordinate ``(0, 0)``,
                 and all positions are within the bounds of the AFM image.
             bond_threshold: Threshold probability when an edge is considered a bond between atoms.
             return_grid: Whether to return position grid prediction.
 
         Returns:
-            graphs: Predicted graphs.
-            grid: torch.Tensor or np.ndarray. Atom position grid from PosNet prediction. Type matches input AFM image type.
+            Tuple (**graphs**, **grid**), where
+
+            - **graphs**: Predicted graphs.
+            - **grid**: Atom position grid from PosNet prediction. Type matches input AFM image type.
         """
         if return_grid and pos is not None:
             raise ValueError("Cannot return position grid if pos is not None.")
@@ -623,19 +655,20 @@ class GraphImgNetIce(GraphImgNet):
     https://arxiv.org/abs/2310.17161.
 
     Three sets of pretrained weights are available:
+
         - 'cu111'
         - 'au111-monolayer'
         - 'au111-bilayer'
 
     Arguments:
-        pretrained_weights: If specified, load pretrained weights.
-        grid_z_range: The real-space range in z-direction of the position grid in angstroms. Of the format (z_min, z_max).
-            Has to be specified when pretrained_weights is not given.
+        pretrained_weights: Name of pretrained weights. If specified, load pretrained weights. Otherwise, weights are initialized
+            randomly.
+        grid_z_range: The real-space range in z-direction of the position grid in angstroms. Of the format ``(z_min, z_max)``.
+            Has to be specified when **pretrained_weights** is not given.
         device: Device to store model on.
     """
 
     def __init__(self, pretrained_weights: Optional[str] = None, grid_z_range: Optional[Tuple[float, float]] = None, device="cuda"):
-        
         if pretrained_weights is not None:
             ice_z_ranges = {
                 "cu111": (-2.9, 0.5),
@@ -666,7 +699,7 @@ class GraphImgNetIce(GraphImgNet):
             pool_type="avg",
             decoder_z_sizes=[5, 15, outsize],
             z_outs=[3, 3, 5, 10],
-            attention_activation='softmax',
+            attention_activation="softmax",
             afm_res=0.125,
             grid_z_range=grid_z_range,
             peak_std=0.20,

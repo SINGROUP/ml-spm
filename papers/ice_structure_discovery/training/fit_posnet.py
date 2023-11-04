@@ -225,7 +225,7 @@ def run(cfg):
                     
                     # Forward
                     with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=use_amp):
-                        pred = model(X)
+                        pred, _ = model(X)
                         loss = criterion(pred, ref)
                     
                     if cfg['timings'] and cfg['global_rank'] == 0: 
@@ -274,7 +274,7 @@ def run(cfg):
                             t1 = time.perf_counter()
                         
                         # Forward
-                        pred = model.module(X)
+                        pred, _ = model.module(X)
                         loss = criterion(pred, ref)
 
                         loss_logger.add_val_loss(loss)
@@ -327,7 +327,7 @@ def run(cfg):
                         t1 = time.perf_counter()
                     
                     # Forward
-                    pred = model(X)
+                    pred, _ = model(X)
                     loss = criterion(pred, ref)
                     eval_losses.append(loss)
 
@@ -367,7 +367,7 @@ def run(cfg):
                 X, ref, xyz, box_borders = batch_to_device(batch, cfg['local_rank'])
                 
                 # Forward
-                pred = model.module(X)
+                pred, _ = model.module(X)
                 loss = criterion(pred, ref)
 
                 # Back to host
