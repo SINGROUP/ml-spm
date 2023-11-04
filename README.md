@@ -1,6 +1,8 @@
 # ML-SPM
 Machine learning for scanning probe microscopy
 
+[![Documentation Status](https://readthedocs.org/projects/ml-spm/badge/?version=latest)](https://ml-spm.readthedocs.io/en/latest/?badge=latest)
+
 ## Installation
 
 Install pre-requisites:
