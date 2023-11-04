@@ -63,7 +63,7 @@ class GraphStats:
         """
         return np.sum(self._conf_mat_node, axis=0) if size_bin < 0 else self._conf_mat_node[size_bin]
 
-    def conf_mat_edge(self, size_bin=-1):
+    def conf_mat_edge(self, size_bin: int = -1):
         """
         Get the confusion matrix for edge classification.
 
@@ -75,7 +75,7 @@ class GraphStats:
         """
         return np.sum(self._conf_mat_edge, axis=0) if size_bin < 0 else self._conf_mat_edge[size_bin]
 
-    def edge_precision(self, size_bin=-1) -> np.ndarray:
+    def edge_precision(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the precision for edge classification.
 
@@ -88,7 +88,7 @@ class GraphStats:
         conf_mat = self.conf_mat_edge(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=0)
 
-    def edge_recall(self, size_bin=-1) -> np.ndarray:
+    def edge_recall(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the recall for edge classification.
 
@@ -101,7 +101,7 @@ class GraphStats:
         conf_mat = self.conf_mat_edge(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=1)
 
-    def node_precision(self, size_bin=-1) -> np.ndarray:
+    def node_precision(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the precision for node classification.
 
@@ -114,7 +114,7 @@ class GraphStats:
         conf_mat = self.conf_mat_node(size_bin)
         return np.diag(conf_mat) / conf_mat.sum(axis=0)
 
-    def node_recall(self, size_bin=-1) -> np.ndarray:
+    def node_recall(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the precision for node classification.
 
@@ -131,7 +131,7 @@ class GraphStats:
         arrays = [np.array(a) for a in arrays]
         return np.concatenate(arrays, axis=0) if size_bin < 0 else arrays[size_bin]
 
-    def graph_sizes(self, size_bin=-1) -> np.ndarray:
+    def graph_sizes(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of graph sizes.
 
@@ -143,7 +143,7 @@ class GraphStats:
         """
         return self._get_array(self._graph_sizes, size_bin)
 
-    def node_count_diffs(self, size_bin=-1) -> np.ndarray:
+    def node_count_diffs(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of differences in node counts between predictions and references.
 
@@ -155,7 +155,7 @@ class GraphStats:
         """
         return self._get_array(self._node_count_diffs, size_bin)
 
-    def bond_count_diffs(self, size_bin=-1) -> np.ndarray:
+    def bond_count_diffs(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of differences in edge counts between predictions and references.
 
@@ -167,7 +167,7 @@ class GraphStats:
         """
         return self._get_array(self._bond_count_diffs, size_bin)
 
-    def hausdorff_distances(self, size_bin=-1) -> np.ndarray:
+    def hausdorff_distances(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of Hausdorff distances between predictions and references.
 
@@ -179,7 +179,7 @@ class GraphStats:
         """
         return self._get_array(self._hausdorff_distances, size_bin)
 
-    def matching_distances(self, size_bin=-1) -> np.ndarray:
+    def matching_distances(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of matching distances between predictions and references. The matching distance
         is the distance between a pair of nodes in the prediction and reference that were within the set
@@ -193,7 +193,7 @@ class GraphStats:
         """
         return self._get_array(self._matching_distances, size_bin)
 
-    def missing_nodes(self, size_bin=-1) -> np.ndarray:
+    def missing_nodes(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of the number of missing nodes in predictions compared to references.
 
@@ -205,7 +205,7 @@ class GraphStats:
         """
         return self._get_array(self._missing_nodes, size_bin)
 
-    def extra_nodes(self, size_bin=-1) -> np.ndarray:
+    def extra_nodes(self, size_bin: int = -1) -> np.ndarray:
         """
         Get the full list of the number of extra nodes in predictions compared to references.
 
@@ -217,7 +217,7 @@ class GraphStats:
         """
         return self._get_array(self._extra_nodes, size_bin)
 
-    def _check_bins(self, size_bin):
+    def _check_bins(self, size_bin: int):
         for _ in range(self.n_bins, size_bin + 1):
             self._graph_sizes.append([])
             self._node_count_diffs.append([])
