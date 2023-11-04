@@ -1,0 +1,9 @@
+matplotlib
+numpy
+scipy
+pytorch
+scikit-image
+ppafm[opencl]
+webdataset
+sphinx==7.2.6
+furo==2023.9.10
