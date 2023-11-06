@@ -180,7 +180,7 @@ def run(cfg):
                 t1 = time.perf_counter()
 
             # Gather statistical information
-            pred_graphs = model.predict_graph(X, bond_threshold=0.5)
+            pred_graphs, _ = model.predict_graph(X, bond_threshold=0.5)
             stats.add_batch(pred_graphs, ref_graphs)
 
             if (ib+1) % cfg['print_interval'] == 0:

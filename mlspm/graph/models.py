@@ -616,8 +616,7 @@ class GraphImgNet(nn.Module):
         x: torch.Tensor | np.ndarray,
         pos: Optional[torch.Tensor] = None,
         bond_threshold: float = 0.5,
-        return_grid: bool = False,
-    ) -> Tuple[list[MoleculeGraph], torch.Tensor | np.ndarray]:
+    ) -> Tuple[list[MoleculeGraph], Optional[torch.Tensor | np.ndarray]]:
         """
         Predict molecule graphs from AFM images.
 
@@ -627,26 +626,25 @@ class GraphImgNet(nn.Module):
                 The positions should be such that the lower left corner of the AFM image is at coordinate ``(0, 0)``,
                 and all positions are within the bounds of the AFM image.
             bond_threshold: Threshold probability when an edge is considered a bond between atoms.
-            return_grid: Whether to return position grid prediction.
 
         Returns:
             Tuple (**graphs**, **grid**), where
 
             - **graphs**: Predicted graphs.
-            - **grid**: Atom position grid from PosNet prediction. Type matches input AFM image type.
+            - **grid**: Atom position grid from PosNet prediction when input **pos** is ``None``.
+              Type matches input AFM image type.
         """
-        if return_grid and pos is not None:
-            raise ValueError("Cannot return position grid if pos is not None.")
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x).float().to(self.device)
         if pos is None:
             if self.posnet is None:
                 raise RuntimeError(f"Attempting to predict positions, but PosNet is not defined.")
             pos, grid, _ = self.posnet.get_positions(x)
+        else:
+            grid = None
         node_classes, edge_classes, edges = self.forward(x, pos)
         graphs = self.pred_to_graph(pos, node_classes, edge_classes, edges, bond_threshold)
-        ret = (graphs, grid) if return_grid else graphs
-        return ret
+        return graphs, grid
 
 
 class GraphImgNetIce(GraphImgNet):
