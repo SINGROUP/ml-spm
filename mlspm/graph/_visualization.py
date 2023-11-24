@@ -75,12 +75,14 @@ def plot_graphs(
             if (s < 0).any():
                 raise ValueError("Encountered atom z position(s) below box borders.")
 
-            c = [class_colors[atom.class_index] for atom in mol.atoms]
+            c = np.array([class_colors[atom.class_index] for atom in mol.atoms])
 
-            ax.scatter(mol_pos[:, 0], mol_pos[:, 1], c=c, s=s, edgecolors="k", zorder=2)
             for b in mol.bonds:
                 pos = np.vstack([mol_pos[b[0]], mol_pos[b[1]]])
                 ax.plot(pos[:, 0], pos[:, 1], "k", linewidth=2, zorder=1)
+            
+            sort_mask = mol_pos[:, 2].argsort()
+            ax.scatter(mol_pos[sort_mask, 0], mol_pos[sort_mask, 1], c=c[sort_mask], s=s[sort_mask], edgecolors="k", zorder=2)
 
         ax.set_xlim(box_borders[0][0], box_borders[1][0])
         ax.set_ylim(box_borders[0][1], box_borders[1][1])
@@ -96,12 +98,14 @@ def plot_graphs(
             if (s < 0).any():
                 raise ValueError("Encountered atom z position(s) below box borders.")
 
-            c = [class_colors[atom.class_index] for atom in mol.atoms]
+            c = np.array([class_colors[atom.class_index] for atom in mol.atoms])
 
             for b in mol.bonds:
                 pos = np.vstack([mol_pos[b[0]], mol_pos[b[1]]])
                 ax.plot(pos[:, 0], pos[:, 2], "k", linewidth=2, zorder=1)
-            ax.scatter(mol_pos[:, 0], mol_pos[:, 2], c=c, s=s, edgecolors="k", zorder=2)
+            
+            sort_mask = (-mol_pos[:, 1]).argsort()
+            ax.scatter(mol_pos[sort_mask, 0], mol_pos[sort_mask, 2], c=c[sort_mask], s=s[sort_mask], edgecolors="k", zorder=2)
 
         ax.set_xlim(box_borders[0][0], box_borders[1][0])
         ax.set_ylim(box_borders[0][2], box_borders[1][2])
@@ -109,6 +113,7 @@ def plot_graphs(
 
     ind = start_ind
     for i in range(n_samples):
+        
         # Setup plot grid
         x_size = 5 * n_plot
         x_extra = 0.35 * max([len(c) for c in classes])
@@ -160,7 +165,7 @@ def plot_graphs(
         ss = get_marker_size(marker_zs, scatter_size)
         for i, (s, z) in enumerate(zip(ss, marker_zs)):
             ax_legend.scatter(dx, y_start2 - dy * i, s=s, c="w", edgecolors="k")
-            ax_legend.text(2 * dx, y_start2 - dy * i, f"z = {z}Å", fontsize=16, ha="left", va="center_baseline")
+            ax_legend.text(2 * dx, y_start2 - dy * i, f"z = {z:.2f}Å", fontsize=16, ha="left", va="center_baseline")
 
         ax_legend.set_xlim(0, 1)
         ax_legend.set_ylim(0, 1)
