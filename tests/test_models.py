@@ -47,7 +47,7 @@ def test_PosNet():
 def test_GraphImgNet():
     from mlspm.models import GraphImgNet, PosNet
 
-    posnet = PosNet(afm_res=0.2, peak_std=0.25)
+    posnet = PosNet(afm_res=0.2, peak_std=0.25, device=device)
     model = GraphImgNet(
         n_classes=4,
         posnet=posnet,
