@@ -83,3 +83,14 @@ def test_interpolate_and_crop():
 
     assert len(X) == 1
     assert X[0].shape == (2, 10, 10, 10)
+
+
+def test_add_cutout():
+    from mlspm.preprocessing import add_cutout
+
+    np.random.seed(0)
+
+    for _ in range(100):
+        test_input = np.ones((3, 32, 32, 32))
+        add_cutout([test_input], n_holes=10)
+        assert np.isclose(test_input, 0.0).any()
