@@ -324,6 +324,9 @@ class GraphStats:
         # Histogram of graph sizes
         count_histogram(self.graph_sizes())
         plt.title("Reference graph size")
+        plt.xlabel("Number of nodes in graph")
+        plt.ylabel("Normalized count")
+        plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "graph_size.png"))
         if verbose > 0:
             print(f"Graph size histogram saved to {savepath}")
@@ -332,6 +335,9 @@ class GraphStats:
         # Histogram of node count diffs
         count_histogram(self.node_count_diffs())
         plt.title("Node count difference")
+        plt.xlabel("Difference in number of nodes")
+        plt.ylabel("Normalized count")
+        plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "node_diff.png"))
         if verbose > 0:
             print(f"Node count difference histogram saved to {savepath}")
@@ -340,16 +346,19 @@ class GraphStats:
         # Histogram of bond count diffs
         count_histogram(self.bond_count_diffs())
         plt.title("Bond count difference")
+        plt.xlabel("Difference in number of bonds")
+        plt.ylabel("Normalized count")
+        plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "bond_diff.png"))
         if verbose > 0:
             print(f"Bond count difference histogram saved to {savepath}")
         plt.close()
 
-        # Node classification
-        fig = plt.figure(figsize=(1.2 * self.n_classes, 1.0 * self.n_classes))
+        # Node confusion matrix
+        fig = plt.figure(figsize=(max(6, 1.2 * self.n_classes), max(5, 1.0 * self.n_classes)))
         ax = fig.add_subplot(111)
-        tick_labels = [", ".join([elements[e - 1] for e in c]) for c in self.classes]
-        plot_confusion_matrix(ax, self.conf_mat_node(), tick_labels)
+        node_tick_labels = [", ".join([elements[e - 1] for e in c]) for c in self.classes]
+        plot_confusion_matrix(ax, self.conf_mat_node(), node_tick_labels)
         ax.set_title("Node confusion matrix")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "conf_mat_node.png"))
@@ -357,11 +366,10 @@ class GraphStats:
             print(f"Node confusion matrix saved to {savepath}")
         plt.close()
 
-        # Edge classification
+        # Edge confusion matrix
         fig = plt.figure(figsize=(6, 5))
         ax = fig.add_subplot(111)
-        tick_labels = ["No edge", "Edge"]
-        plot_confusion_matrix(ax, self.conf_mat_edge(), tick_labels)
+        plot_confusion_matrix(ax, self.conf_mat_edge(), ["No edge", "Edge"])
         ax.set_title("Edge confusion matrix")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "conf_mat_edge.png"))
@@ -375,7 +383,9 @@ class GraphStats:
         for c in range(self.n_classes):
             prec = [self.node_precision(b)[c] for b in range(self.n_bins)]
             plt.plot(bins, prec)
-        plt.legend([str(c) for c in range(self.n_classes)])
+        plt.legend(node_tick_labels)
+        plt.xlabel("Number of nodes in graph")
+        plt.ylabel("Node classification precision")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "binned_node_precision.png"))
         if verbose > 0:
@@ -388,7 +398,9 @@ class GraphStats:
         for c in range(self.n_classes):
             prec = [self.node_recall(b)[c] for b in range(self.n_bins)]
             plt.plot(bins, prec)
-        plt.legend([str(c) for i in range(self.n_classes)])
+        plt.legend(node_tick_labels)
+        plt.xlabel("Number of nodes in graph")
+        plt.ylabel("Node classification recall")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "binned_node_recall.png"))
         if verbose > 0:
@@ -402,6 +414,8 @@ class GraphStats:
             prec = [self.edge_precision(b)[c] for b in range(self.n_bins)]
             plt.plot(bins, prec)
         plt.legend(["No edge", "Edge"])
+        plt.xlabel("Number of nodes in graph")
+        plt.ylabel("Edge classification precision")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "binned_edge_precision.png"))
         if verbose > 0:
@@ -415,6 +429,8 @@ class GraphStats:
             prec = [self.edge_recall(b)[c] for b in range(self.n_bins)]
             plt.plot(bins, prec)
         plt.legend(["No edge", "Edge"])
+        plt.xlabel("Number of nodes in graph")
+        plt.ylabel("Edge classification recall")
         plt.tight_layout()
         plt.savefig(savepath := os.path.join(outdir, "binned_edge_recall.png"))
         if verbose > 0:
@@ -423,20 +439,24 @@ class GraphStats:
 
         if len(self.hausdorff_distances()) > 0:
             # Histogram of Hausdorff distances
-            fig = plt.figure(figsize=(8, 8))
+            plt.figure(figsize=(8, 8))
             plt.hist(self.hausdorff_distances(), bins=20, edgecolor="black", density=True)
             plt.title("Hausdorff distances")
             plt.xlabel(f"Distance ($\AA$)")
+            plt.ylabel("Normalized count")
+            plt.tight_layout()
             plt.savefig(savepath := os.path.join(outdir, "hausdorff.png"))
             if verbose > 0:
                 print(f"Hausdorff distance histogram saved to {savepath}")
             plt.close()
 
             # Histograms of matching distances
-            fig = plt.figure(figsize=(8, 8))
-            fig.suptitle("Matching distance")
+            plt.figure(figsize=(8, 8))
             plt.hist(self.matching_distances(), bins=20, edgecolor="black", density=True)
-            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+            plt.title("Matching distance")
+            plt.xlabel(f"Distance ($\AA$)")
+            plt.ylabel("Normalized count")
+            plt.tight_layout()
             plt.savefig(savepath := os.path.join(outdir, "matching_distances.png"))
             if verbose > 0:
                 print(f"Histogram of matching distances saved to {savepath}")
