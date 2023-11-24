@@ -4,7 +4,8 @@ import numpy as np
 
 from ..utils import elements
 
-from typing import Iterable, Tuple, Self
+from typing import Iterable, Tuple
+from typing_extensions import Self
 
 
 class Atom:
@@ -44,7 +45,7 @@ class Atom:
 
         if q is None:
             q = 0
-        self.q = 0
+        self.q = q
 
         if classes is not None:
             assert class_weights is None, "Cannot have both classes and class_weights not be None."
