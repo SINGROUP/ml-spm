@@ -26,15 +26,15 @@ def load_data(data_path: os.PathLike):
     return X
 
 
-def make_prediction(model, X, match_threshold):
+def make_prediction(model: GraphImgNetIce, X, match_threshold, device):
     with torch.no_grad():
         box_borders = graph.make_box_borders(X.shape[1:3], (model.afm_res, model.afm_res), z_range=model.posnet.grid_z_range)
         xt = torch.from_numpy(X).float().to(device)
-        xt = model.posnet(xt.unsqueeze(1))
+        xt, _ = model.posnet(xt.unsqueeze(1))
         pos, matches, labels = graph.find_gaussian_peaks(
             xt, box_borders, match_threshold=match_threshold, std=model.posnet.peak_std, method=model.posnet.match_method
         )
-        pred_graph = model.predict_graph(X, pos=pos)
+        pred_graph, _ = model.predict_graph(X, pos=pos)
         pred_grid = xt.cpu().numpy()
         matches = matches.cpu().numpy()
         labels = labels.cpu().numpy()
@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
             # Load data and run prediction
             X = load_data(exp_data_dir / exp_data_file)
-            pred_graph, pred_grid, matches, labels, box_borders = make_prediction(model, X, match_thresholds[weights])
+            pred_graph, pred_grid, matches, labels, box_borders = make_prediction(model, X, match_thresholds[weights], device=device)
 
             # Construct xyz array from the graph
             xyzs = np.concatenate(
