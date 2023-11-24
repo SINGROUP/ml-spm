@@ -33,7 +33,8 @@ Homepage = "https://github.com/SINGROUP/ml-spm"
 dev = [
     "pytest",
     "sphinx",
-    "furo"
+    "furo",
+    "flake8"
 ]
 
 [tool.setuptools]
