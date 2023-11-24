@@ -22,13 +22,14 @@ jobs:
 
         - name: Install package
           run: |
-              pip install .[dev]
+              bash ./build.sh
+              pip install -e .[dev]
 
         - name: Lint with flake8
           run: flake8 .
 
         - name: Run pytest
-          run: pytest --junitxml=pytest.xml --cov-report=term-missing --cov| tee pytest-coverage.txt
+          run: pytest --junitxml=pytest.xml --cov-report=term-missing --cov=mlspm tests | tee pytest-coverage.txt
 
         - name: Pytest coverage comment
           uses: MishaKav/pytest-coverage-comment@main
