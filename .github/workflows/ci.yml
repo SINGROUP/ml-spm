@@ -32,18 +32,8 @@ jobs:
           run: pytest --junitxml=pytest.xml --cov-report=term-missing --cov=mlspm tests | tee pytest-coverage.txt
 
         - name: Pytest coverage comment
-          id: coverage_comment
+          if: ${{ github.event_name == 'pull_request' }}
           uses: MishaKav/pytest-coverage-comment@main
           with:
               pytest-coverage-path: ./pytest-coverage.txt
               junitxml-path: ./pytest.xml
-
-        - name: Create coverage badge
-          uses: schneegans/dynamic-badges-action@v1.7.0
-          with:
-              auth: ${{ secrets.COVERAGE_GIST_SECRET }}
-              gistID: 913d30e2a2e333eb407353072948042d
-              filename: coverage.json
-              label: Coverage
-              message: ${{ steps.coverage_comment.outputs.coverage }}
-              color: ${{ steps.coverage_comment.outputs.color }}
