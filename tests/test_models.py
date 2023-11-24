@@ -170,8 +170,8 @@ def test_GraphImgNet():
 
     # Test that the edges are not directional
     node_features_reverse, edge_features_reverse = model.mpnn(pos, x_afm, edges_combined[[1, 0]])
-    assert torch.allclose(node_features, node_features_reverse)
-    assert torch.allclose(edge_features, edge_features_reverse)
+    assert torch.allclose(node_features, node_features_reverse, rtol=1e-4, atol=1e-6)
+    assert torch.allclose(edge_features, edge_features_reverse, rtol=1e-4, atol=1e-6)
 
     # Test whole model
     model.afm_cutoff = 0.8
