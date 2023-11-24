@@ -1,6 +1,6 @@
 
-name: Python CI
-on: [push, pull_request]
+name: CI on push
+on: push
 
 jobs:
   run-tests:
@@ -29,10 +29,5 @@ jobs:
           run: flake8 .
 
         - name: Run pytest
-          run: pytest --junitxml=pytest.xml --cov-report=term-missing --cov=mlspm tests | tee pytest-coverage.txt
+          run: pytest
 
-        - name: Pytest coverage comment
-          uses: MishaKav/pytest-coverage-comment@main
-          with:
-              pytest-coverage-path: ./pytest-coverage.txt
-              junitxml-path: ./pytest.xml

@@ -2,7 +2,7 @@
 Machine learning for scanning probe microscopy
 
 [![Documentation Status](https://readthedocs.org/projects/ml-spm/badge/?version=latest)](https://ml-spm.readthedocs.io/en/latest/?badge=latest)
-
+![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/NikoOinonen/913d30e2a2e333eb407353072948042d/raw/cc44c1ee11f6e90c4159e49786ec1c2cedbeb6a9/coverage.json)
 ## Installation
 
 Install pre-requisites:

@@ -1,0 +1,46 @@
+
+name: Update coverage badge
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    update-badge:
+
+        runs-on: ubuntu-latest
+        
+        steps:
+
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: 3.11
+
+            - name: Install package
+              run: |
+                  bash ./build.sh
+                  pip install -e .[dev]
+  
+            - name: Run pytest
+              run: pytest --cov-report=term-missing --cov=mlspm tests | tee pytest-coverage.txt
+  
+            - name: Pytest coverage comment
+              id: coverage_comment
+              uses: MishaKav/pytest-coverage-comment@main
+              with:
+                  hide-comment: true
+                  pytest-coverage-path: ./pytest-coverage.txt
+  
+            - name: Create coverage badge
+              uses: schneegans/dynamic-badges-action@v1.7.0
+              with:
+                  auth: ${{ secrets.COVERAGE_GIST_SECRET }}
+                  gistID: 913d30e2a2e333eb407353072948042d
+                  filename: coverage.json
+                  label: Coverage
+                  message: ${{ steps.coverage_comment.outputs.coverage }}
+                  color: ${{ steps.coverage_comment.outputs.color }}
