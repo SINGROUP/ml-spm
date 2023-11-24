@@ -212,7 +212,7 @@ def run(cfg):
             X, _, _, _, ref_graphs, xyz = batch_to_device(batch, device)
             
             # Forward
-            pred_graphs, grid_pred = model.predict_graph(X, bond_threshold=0.5, return_grid=True)
+            pred_graphs, grid_pred = model.predict_graph(X, bond_threshold=0.5)
             grid_pred = grid_pred.cpu().numpy()
 
             # Save xyzs
