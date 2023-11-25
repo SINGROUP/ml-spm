@@ -1,3 +1,4 @@
+from pathlib import Path
 import shutil
 import torch
 import pytest
@@ -435,7 +436,7 @@ def test_GraphSeqStats():
     seq_stats = GraphStats(classes=classes, bin_size=1)
     seq_stats.add_batch(pred, ref)
 
-    outdir = './test_stats'
+    outdir = Path('./test_stats')
     seq_stats.plot(outdir)
     seq_stats.report(outdir)
     shutil.rmtree(outdir)

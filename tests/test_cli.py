@@ -1,6 +1,5 @@
 
 import pytest
-import mlspm.cli
 
 def test_parse_args():
     from mlspm.cli import parse_args

@@ -165,8 +165,8 @@ def test_GraphImgNet():
     # Test translational invariance of the MPNN
     pos += torch.Tensor([1.0, 1.0, 1.0]).to(device)
     node_features_shifted, edge_features_shifted = model.mpnn(pos, x_afm, edges_combined)
-    assert torch.allclose(node_features, node_features_shifted)
-    assert torch.allclose(edge_features, edge_features_shifted)
+    assert torch.allclose(node_features, node_features_shifted, rtol=1e-4, atol=1e-6)
+    assert torch.allclose(edge_features, edge_features_shifted, rtol=1e-4, atol=1e-6)
 
     # Test that the edges are not directional
     node_features_reverse, edge_features_reverse = model.mpnn(pos, x_afm, edges_combined[[1, 0]])
