@@ -419,6 +419,7 @@ def save_graphs_to_xyzs(
     Arguments:
         molecules: Molecule graphs to save.
         classes: Chemical elements for atom classification. Either atomic numbers of chemical symbols.
+            The element for each atom in the graph is the first element in the corresponding class.
         outfile_format: Formatting string for saved files. Sample index is available in variable ``ind``.
         start_ind: Index where file numbering starts.
         verbose: Whether to print output information.
