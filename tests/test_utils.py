@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 
 import numpy as np
 from torch import nn, optim
@@ -59,3 +60,5 @@ def test_checkpoints():
     assert np.allclose(optimizer.state_dict()["state"][0]["exp_avg"], optimizer_new.state_dict()["state"][0]["exp_avg"])
     assert np.allclose(lr_scheduler.state_dict()["_last_lr"], lr_scheduler_new.state_dict()["_last_lr"])
     assert np.allclose(additional_data["test_data"], 3)
+
+    shutil.rmtree(save_dir)
