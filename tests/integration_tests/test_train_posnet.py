@@ -39,7 +39,8 @@ def make_model(device, cfg):
         decoder_z_sizes=[5, 10, outsize],
         z_outs=[3, 3, 5, 8],
         peak_std=cfg["peak_std"],
-    ).to(device)
+        device=device
+    )
     criterion = nn.MSELoss(reduction="mean")
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
     lr_decay_rate = 1e-5
