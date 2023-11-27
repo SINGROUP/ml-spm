@@ -240,14 +240,7 @@ def run(cfg):
                     lr_decay.step()
 
                     # Log losses
-                    try:
-                        loss_logger.add_train_loss(loss)
-                    except ValueError as e:
-                        torch.save(model.module.state_dict(), save_path := os.path.join(cfg['run_dir'], 'debug_model.pth'))
-                        with open('debug_data', 'wb') as f:
-                            pickle.dump((X.cpu().numpy(), ref.cpu().numpy()), f)
-                        print(f'Save debug data on rank {cfg["global_rank"]}')
-                        raise e
+                    loss_logger.add_train_loss(loss)
 
                     if cfg['timings'] and cfg['global_rank'] == 0:
                         torch.cuda.synchronize()

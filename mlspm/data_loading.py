@@ -184,7 +184,7 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
     return sw
 
 
-def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[dict, None, None]:
+def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[dict, None, None]:
     """
     Take a sample in dict format and update it with fields containing an image stack, xyz coordinates and scan window.
     Rotate the images to be xy-indexing convention and stack them into a single array.
