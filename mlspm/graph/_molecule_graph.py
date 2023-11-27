@@ -276,8 +276,10 @@ class MoleculeGraph:
         """
         Transform atom positions in the xy plane.
 
+        Transformations are perfomed in the order: shift, rotate, flip x, flip y
+
         Arguments:
-            shift: Shift atom positions in xy plane. Performed before rotation and flip.
+            shift: Shift atom positions in xy plane.
             rot_xy: Rotate atoms in xy plane by rot_xy degrees around center point.
             flip_x: Mirror atom positions in x direction with respect to the center point.
             flip_y: Mirror atom positions in y direction with respect to the center point.

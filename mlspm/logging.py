@@ -204,10 +204,6 @@ class LossLogPlot:
         self._synced_losses = {"train": SyncedLoss(len(self.loss_labels)), "val": SyncedLoss(len(self.loss_labels))}
         self._init_log(init_epoch)
 
-    def __del__(self):
-        if self.stream is not sys.stdout:
-            self.stream.close()
-
     def _init_log(self, init_epoch: Optional[int]):
         log_exists = os.path.isfile(self.log_path)
         if self.world_size > 1:

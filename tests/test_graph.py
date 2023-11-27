@@ -1,11 +1,16 @@
-import torch
-import pytest
+import os
+import shutil
+from pathlib import Path
+
 import numpy as np
+import pytest
+import torch
+from scipy.spatial.distance import cdist
 
 
 def test_collate_graph():
-    from mlspm.graph import MoleculeGraph
     from mlspm.data_loading import collate_graph
+    from mlspm.graph import MoleculeGraph
 
     # fmt: off
 
@@ -215,7 +220,7 @@ def test_molecule_graph_array():
 
 
 def test_molecule_graph_remove_atoms():
-    from mlspm.graph import MoleculeGraph, Atom
+    from mlspm.graph import Atom, MoleculeGraph
 
     # fmt: off
 
@@ -243,7 +248,7 @@ def test_molecule_graph_remove_atoms():
     assert removed == []
 
     new_molecule, removed = molecule.remove_atoms([1])
-    removed_expected = [(Atom(np.array([1.0, 1.0, 0.0]), 2), [0, 1, 0])]
+    removed_expected = [(Atom(np.array([1.0, 1.0, 0.0]), 'H'), [0, 1, 0])]
     atoms_expected = np.array([
         [0.0, 0.0,  0.0, 1],
         [1.0, 0.0,  0.0, 3],
@@ -331,9 +336,79 @@ def test_molecule_graph_add_atom():
         assert a == b
 
 
-def test_GraphSeqStats():
-    from mlspm.graph import GraphStats
+def test_molecule_graph_transform_xy():
     from mlspm.graph import MoleculeGraph
+
+    # fmt:off
+    atoms = np.array([
+            [0.0, 0.0,  0.0, 1],
+            [1.0, 1.0,  1.0, 2],
+            [1.0, 0.0,  0.0, 3],
+            [2.0, 0.0, -1.0, 4]
+    ])
+    # fmt:on
+    bonds = [(0, 2), (1, 2), (2, 3)]
+    molecule = MoleculeGraph(atoms, bonds)
+
+    molecule_transformed = molecule.transform_xy(shift=(1, 1), rot_xy=90, flip_x=True, flip_y=True, center=(1, 1))
+
+    xyz_transformed = molecule_transformed.array(xyz=True)
+    # fmt:off
+    xyz_expected = np.array(
+        [
+            [1.0,  1.0,  0.0],
+            [2.0,  0.0,  1.0],
+            [1.0,  0.0,  0.0],
+            [1.0, -1.0, -1.0]
+        ]
+    )
+    # fmt:on
+
+    assert np.allclose(xyz_transformed, xyz_expected)
+
+
+def test_molecule_graph_crop_atoms():
+    from mlspm.graph import MoleculeGraph
+
+    # fmt:off
+    atoms = np.array([
+            [0.0, 0.0,  0.0, 1],
+            [1.0, 1.0,  1.0, 2],
+            [1.0, 0.0,  0.0, 3],
+            [2.0, 0.0, -1.0, 4]
+    ])
+    # fmt:on
+    bonds = [(0, 2), (1, 2), (2, 3)]
+    molecule = MoleculeGraph(atoms, bonds)
+    box_borders = np.array([[-0.5, -0.5, -0.5], [1.5, 1.5, 0.5]])
+
+    molecule_cropped = molecule.crop_atoms(box_borders)
+
+    xyz_cropped = molecule_cropped.array(xyz=True)
+    # fmt:off
+    xyz_expected = np.array(
+        [
+            [0.0, 0.0,  0.0],
+            [1.0, 0.0,  0.0],
+        ]
+    )
+    # fmt:on
+
+    assert np.allclose(xyz_cropped, xyz_expected)
+    assert molecule_cropped.bonds == [(0, 1)]
+
+
+def test_molecule_graph_randomize_positions():
+    from mlspm.graph import MoleculeGraph
+
+    molecule = MoleculeGraph(np.zeros((3, 4)), [])
+    molecule_randomized = molecule.randomize_positions()
+
+    assert not np.allclose(molecule_randomized.array(xyz=True), 0.0)
+
+
+def test_GraphSeqStats():
+    from mlspm.graph import GraphStats, MoleculeGraph
 
     classes = [[0], [1], [2]]
 
@@ -434,7 +509,143 @@ def test_GraphSeqStats():
     seq_stats = GraphStats(classes=classes, bin_size=1)
     seq_stats.add_batch(pred, ref)
 
-    # seq_stats.plot('./seq_stats')
-    # seq_stats.report('./seq_stats')
+    outdir = Path('./test_stats')
+    seq_stats.plot(outdir)
+    seq_stats.report(outdir)
+    shutil.rmtree(outdir)
 
     # fmt:on
+
+
+def test_peaks():
+    from mlspm.graph import MoleculeGraph, find_gaussian_peaks, make_position_distribution
+
+    # fmt:off
+    atoms = np.array([
+        [2.0, 2.0, 1.0, 0],
+        [2.0, 6.0, 2.0, 0],
+        [6.0, 4.0, 2.0, 0],
+        [4.0, 2.0, 2.0, 0]
+    ])
+    # fmt:on
+    box_borders = np.array([[0.0, 0.0, 0.0], [8.0, 8.0, 3.0]])
+    mols = [MoleculeGraph(atoms, bonds=[])]
+    std = 0.2
+    devices = ["cpu"]
+    if torch.cuda.is_available():
+        devices.append("cuda")
+
+    dist = make_position_distribution(mols, box_borders=box_borders, std=std)
+
+    for device in devices:
+        dist_d = torch.from_numpy(dist).to(device)
+
+        for method in ["zncc", "mad", "msd", "mad_norm", "msd_norm"]:
+            if method == "zncc" and device == "cuda":
+                with pytest.raises(NotImplementedError):
+                    find_gaussian_peaks(dist_d, box_borders, method=method)
+                continue
+
+            peaks, _, _ = find_gaussian_peaks(dist_d, match_threshold=0.5, box_borders=box_borders, std=std, method=method)
+            peaks = peaks[0].cpu().numpy()
+
+            # The matched position could be in different order than the original (and undeterministic order on cuda),
+            # so we test that the minimum matching distance is close to zero.
+            d = cdist(peaks, atoms[:, :3]).min(axis=1)
+            assert np.allclose(d, 0.0)
+
+
+def test_shift_mols_window():
+    from mlspm.graph import shift_mols_window, MoleculeGraph
+
+    atoms = [np.array([[1.0, 1.0, 0.0, 0], [3.0, 3.0, 1.0, 0]]), np.array([[2.0, 4.0, 1.0, 0], [1.0, 5.0, 1.0, 0]])]
+
+    scan_windows = np.array(
+        [
+            [[0.0, 0.0, 0.0], [4.0, 4.0, 1.0]],
+            [[1.0, 3.0, 0.0], [5.0, 7.0, 1.0]],
+        ]
+    )
+    molecules = [MoleculeGraph(atoms[0], []), MoleculeGraph(atoms[1], [])]
+
+    new_molecules, new_scan_window = shift_mols_window(molecules, scan_windows, start=(2, 2))
+
+    assert np.allclose(new_molecules[0].array(xyz=True), np.array([[3.0, 3.0, 0.0], [5.0, 5.0, 1.0]]))
+    assert np.allclose(new_molecules[1].array(xyz=True), np.array([[3.0, 3.0, 1.0], [2.0, 4.0, 1.0]]))
+    assert np.allclose(new_scan_window, np.array([[2.0, 2.0], [6.0, 6.0]]))
+
+
+def test_crop_graph():
+    from mlspm.graph import crop_graph, MoleculeGraph
+
+    afm = [np.arange(32).reshape(1, 4, 4, 2)]
+    print(afm[0][0, :, :, 0])
+    print(afm[0][0, :, :, 1])
+    mols = [
+        MoleculeGraph(
+            np.array(
+                [
+                    [0.0, 0.0, 0.0, 0],
+                    [0.5, 0.5, 0.5, 0],
+                    [1.1, 1.1, 1.0, 0],
+                ]
+            ),
+            [],
+        )
+    ]
+    start = (1, 1)
+    size = (2, 2)
+    box_borders = [[0.0, 0.0, 0.0], [1.5, 1.5, 1.0]]
+    new_start = (1.0, 1.0)
+
+    afm_cropped, mols_cropped, box_borders_cropped = crop_graph(
+        afm, mols, start=start, size=size, box_borders=box_borders, new_start=new_start
+    )
+
+    assert np.allclose(afm_cropped[0][0, :, :, 0], np.array([[10, 12], [18, 20]]))
+    assert np.allclose(afm_cropped[0][0, :, :, 1], np.array([[11, 13], [19, 21]]))
+    assert np.allclose(mols_cropped[0].array(xyz=True), np.array([[1.0, 1.0, 0.5]]))
+    assert np.allclose(box_borders_cropped, np.array([[1.0, 1.0, 0.0], [1.5, 1.5, 1.0]]))
+
+
+def test_save_graphs_to_xyzs():
+    from mlspm.graph import save_graphs_to_xyzs, MoleculeGraph
+    from mlspm.utils import read_xyzs
+
+    classes = [[1], [6, 8]]
+    mols = [
+        MoleculeGraph(
+            np.array(
+                [
+                    [0.0, 0.0, 0.0, 1],
+                    [0.5, 0.5, 0.5, 6],
+                    [1.0, 1.0, 1.0, 8],
+                ]
+            ),
+            [],
+            classes=classes,
+        )
+    ]
+
+    save_graphs_to_xyzs(mols, classes=classes)
+    xyz = read_xyzs(["0_graph.xyz"])[0]
+
+    os.remove("0_graph.xyz")
+
+    assert np.allclose(
+        xyz,
+        np.array(
+            [
+                [0.0, 0.0, 0.0, 1],
+                [0.5, 0.5, 0.5, 6],
+                [1.0, 1.0, 1.0, 6],
+            ]
+        ),
+    )
+
+def test_make_box_borders():
+
+    from mlspm.graph import make_box_borders
+
+    box_borders = make_box_borders(shape=(100, 100), res=(0.1, 0.2), z_range=(0.0, 1.0))
+    assert np.allclose(box_borders, np.array([[0.0, 0.0, 0.0], [9.9, 19.8, 1.0]]))

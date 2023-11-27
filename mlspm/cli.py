@@ -1,4 +1,5 @@
 import argparse
+from typing import Optional
 
 
 def _bool_type(value):
@@ -9,9 +10,12 @@ def _bool_type(value):
     raise KeyError(f"`{value}` can't be interpreted as a boolean.")
 
 
-def parse_args() -> dict:
+def parse_args(argv: Optional[list[str]] = None) -> dict:
     """
     Parse some useful CLI arguments for use in training scripts.
+
+    Arguments:
+        argv: List of argument values. Defaults to ``sys.argv``.
 
     Returns:
         A dictionary of the argument values.
@@ -68,5 +72,5 @@ def parse_args() -> dict:
     parser.add_argument(
         "--avg_best_epochs", type=int, default=3, help="Number of epochs to average the best validation loss over. Default = 3."
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return vars(args)

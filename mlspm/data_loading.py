@@ -136,7 +136,7 @@ def decode_xyz(key: str, data: Any) -> Tuple[np.ndarray, np.ndarray] | Tuple[Non
         sw = get_scan_window_from_comment(comment)
         xyz = []
         while line := data.readline().decode("utf-8"):
-            e, x, y, z, _ = line.strip().split()
+            e, x, y, z = line.strip().split()[:4]
             try:
                 e = int(e)
             except ValueError:
@@ -184,7 +184,7 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
     return sw
 
 
-def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[dict, None, None]:
+def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[dict, None, None]:
     """
     Take a sample in dict format and update it with fields containing an image stack, xyz coordinates and scan window.
     Rotate the images to be xy-indexing convention and stack them into a single array.
@@ -194,7 +194,7 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = True) -> Generator[di
     Arguments:
         src: Iterable of dicts with the fields:
 
-            - ``'{000..0xx}.jpg'`` - :class:`PIL.Image.Image` of one slice of the simulation.
+            - ``'{000..0xx}.{jpg,png}'`` - :class:`PIL.Image.Image` of one slice of the simulation.
             - ``'xyz'`` - Tuple(:class:`np.ndarray`, :class:`np.ndarray`) of the xyz data and the scan window.
 
         reverse: Whether the order of the image stack is reversed.
