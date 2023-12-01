@@ -255,3 +255,20 @@ def test_GraphImgNet():
     ]))
 
     # fmt:on
+
+def test_ASDAFMNet():
+
+    import torch
+    from mlspm.image.models import ASDAFMNet
+
+    torch.manual_seed(0)
+
+    model = ASDAFMNet(n_out=3, last_relu=[False, True, True])
+
+    x = torch.rand((5, 1, 128, 128, 10))
+    ys = model(x)
+
+    assert len(ys) == 3
+    assert ys[0].shape == ys[1].shape == ys[2].shape == (5, 128, 128)
+    assert ys[1].min() >= 0.0
+    assert ys[2].min() >= 0.0

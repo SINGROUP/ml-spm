@@ -13,6 +13,8 @@ def _get_padding(kernel_size: int | Tuple[int, ...], nd: int) -> Tuple[int, ...]
         padding += [(kernel_size[i] - 1) // 2]
     return tuple(padding)
 
+def _flatten_z_to_channels(x):
+    return x.permute(0,1,4,2,3).reshape(x.size(0), -1, x.size(2), x.size(3))
 
 class _ConvNdBlock(nn.Module):
     def __init__(
