@@ -199,7 +199,8 @@ if __name__ == '__main__':
         {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_2_2', 'label': 'E', 'dist': 4.9, 'offset': ( 0.0,  0.0)},
         {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_3'  , 'label': 'F', 'dist': 4.8, 'offset': ( 0.0, -2.0)},
         {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_5'  , 'label': 'G', 'dist': 5.0, 'offset': ( 2.0,  0.0)},
-        {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_6'  , 'label': 'H', 'dist': 4.8, 'offset': ( 1.5,  2.0)}
+        {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_6'  , 'label': 'H', 'dist': 4.8, 'offset': ( 1.5,  2.0)},
+        # {'pred_dir': 'predictions_au111-bilayer'  , 'exp_name': 'Ying_Jiang_4'  , 'label': 'I', 'dist': 4.8, 'offset': ( 0.0,  0.0)}
     ]
 
     data = [get_data(p, exp_data_dir, classes) for p in params]

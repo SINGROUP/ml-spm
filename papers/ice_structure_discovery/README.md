@@ -12,7 +12,7 @@ This folder contains the source code and links to the datasets that were used fo
 
 The subdirectories contain various scripts for training and running predictions with the models:
 - `training`: Scripts for training the atom position and graph construction models, and evaluating the trained models.
-- `prediction`: Scripts for reproducing the result in Fig. 2 of the paper using the pretrained models.
+- `predictions`: Scripts for reproducing the results figures of the paper using the pretrained models.
 
 ## Data
 
@@ -24,5 +24,7 @@ Training datasets:
 - Au(111), bilayer: https://doi.org/10.5281/zenodo.10049856
 
 Experimental data: https://doi.org/10.5281/zenodo.10054847
+
+Final relaxed geometries: https://doi.org/10.5281/zenodo.10362511
 
 Pretrained weights for the models: https://doi.org/10.5281/zenodo.10054348
