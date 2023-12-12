@@ -37,6 +37,8 @@ def _common_parent(paths):
         p = parts[0]
         if all(part == p for part in parts):
             common_part /= p
+        else:
+            break
     return common_part
 
 def download_dataset(name: str, target_dir: PathLike):
