@@ -11,8 +11,8 @@ from plot_predictions import plot_graph as plot_graph_prediction
 from plot_relaxed_structures import get_data as get_data_relaxed
 from plot_relaxed_structures import plot_graph as plot_graph_relaxed
 
-# Set matplotlib font rendering to use LaTex
-plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.serif": ["Computer Modern Roman"]})
+# # Set matplotlib font rendering to use LaTex
+# plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.serif": ["Computer Modern Roman"]})
 
 
 def init_fig(width=140, left_margin=4, top_margin=4, row_gap=6, gap=0.5):
@@ -61,7 +61,7 @@ def init_fig(width=140, left_margin=4, top_margin=4, row_gap=6, gap=0.5):
 
 
 if __name__ == "__main__":
-    init_env(i_platform=1)
+    init_env(i_platform=0)
 
     exp_data_dir = Path("./exp_data")
     sim_data_dir = Path("./relaxed_structures/")

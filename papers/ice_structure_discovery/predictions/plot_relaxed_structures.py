@@ -12,12 +12,12 @@ from ppafm.ocl.AFMulator import AFMulator
 from ppafm.ocl.field import HartreePotential
 from ppafm.ocl.oclUtils import init_env
 
-# Set matplotlib font rendering to use LaTex
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Computer Modern Roman"]
-})
+# # Set matplotlib font rendering to use LaTex
+# plt.rcParams.update({
+#     "text.usetex": True,
+#     "font.family": "serif",
+#     "font.serif": ["Computer Modern Roman"]
+# })
 
 MM_TO_INCH = 1 / 25.4
 
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     class_colors = ['w', 'r']
     fontsize = 7
 
-    init_env(i_platform=1)
+    init_env(i_platform=0)
 
     params = [
         {'sim_name': 'hartree_A', 'exp_name': 'Ying_Jiang_7'  , 'label': 'A', 'dist': 5.00, 'rot_angle': -145.000, 'amp': 2.0, 'nz':  9, 'offset': ( 1.0,  0.0)},
