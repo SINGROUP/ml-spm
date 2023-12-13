@@ -28,3 +28,7 @@ Experimental data: https://doi.org/10.5281/zenodo.10054847
 Final relaxed geometries: https://doi.org/10.5281/zenodo.10362511
 
 Pretrained weights for the models: https://doi.org/10.5281/zenodo.10054348
+
+Training data and configuration files for training the Nequip neural network potentials:
+- Cu(111): https://doi.org/10.5281/zenodo.10371802
+- Au(111): https://doi.org/10.5281/zenodo.10371791
