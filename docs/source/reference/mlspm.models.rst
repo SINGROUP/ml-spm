@@ -13,4 +13,8 @@ mlspm.models
     
     Alias of :class:`mlspm.graph.models.GraphImgNetIce`
 
+.. class:: mlspm.models.ASDAFMNet
+    
+    Alias of :class:`mlspm.image.models.ASDAFMNet`
+
 .. autofunction:: mlspm.models.download_weights
