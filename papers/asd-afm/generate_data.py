@@ -1,6 +1,7 @@
 from math import ceil
 import time
 from pathlib import Path
+from mlspm.datasets import download_dataset
 
 from ppafm.common import sphereTangentSpace
 from ppafm.ml.AuxMap import AtomicDisks, HeightMap, vdwSpheres
@@ -70,6 +71,9 @@ if __name__ == "__main__":
 
     # Make sure the save directory exists
     data_dir.mkdir(exist_ok=True, parents=True)
+
+    # Download the dataset. The extraction may take a while since there are ~140k files.
+    download_dataset('ASD-AFM-molecules', mol_dir)
 
     # Generate dataset
     start_time = time.perf_counter()
