@@ -208,7 +208,7 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[d
         for key in sample.keys():
             if key[-3:] in ["jpg", "png"]:
                 num = key[:-4]
-                if '.' in key:
+                if '.' in num:
                     iz, channel = [int(n) for n in num.split('.')]
                 else:
                     iz, channel = int(num), 0
