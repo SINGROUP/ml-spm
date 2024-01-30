@@ -11,6 +11,7 @@ dependencies:
   - torchvision
   - torchaudio
   - cuda
+  - ninja
   - matplotlib
   - numpy
   - scipy

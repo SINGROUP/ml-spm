@@ -12,9 +12,23 @@ DATASET_URLS = {
     "AFM-ice-Au111-monolayer": "https://zenodo.org/records/10049832/files/AFM-ice-Au111-monolayer.tar.gz?download=1",
     "AFM-ice-Au111-bilayer": "https://zenodo.org/records/10049856/files/AFM-ice-Au111-bilayer.tar.gz?download=1",
     "AFM-ice-exp": "https://zenodo.org/records/10054847/files/exp_data_ice.tar.gz?download=1",
+    "AFM-ice-relaxed": "https://zenodo.org/records/10362511/files/relaxed_structures.tar.gz?download=1",
     "ASD-AFM-molecules": "https://zenodo.org/records/10562769/files/molecules.tar.gz?download=1",
     "AFM-camphor-exp": "https://zenodo.org/records/10562769/files/afm_camphor.tar.gz?download=1",
 }
+
+
+def _common_parent(paths):
+    path_parts = [list(Path(p).parts) for p in paths]
+    common_part = Path()
+    for parts in zip(*path_parts):
+        p = parts[0]
+        if all(part == p for part in parts):
+            common_part /= p
+        else:
+            break
+    return common_part
+
 
 def download_dataset(name: str, target_dir: PathLike):
     """
@@ -26,6 +40,7 @@ def download_dataset(name: str, target_dir: PathLike):
         - ``'AFM-ice-Au111-monolayer'``: https://doi.org/10.5281/zenodo.10049832
         - ``'AFM-ice-Au111-bilayer'``: https://doi.org/10.5281/zenodo.10049856
         - ``'AFM-ice-exp'``: https://doi.org/10.5281/zenodo.10054847
+        - ``'AFM-ice-relaxed'``: https://doi.org/10.5281/zenodo.10362511
         - ``'ASD-AFM-molecules'``: https://doi.org/10.5281/zenodo.10562769 - 'molecules.tar.gz'
         - ``'AFM-camphor-exp'``: https://doi.org/10.5281/zenodo.10562769 - 'afm_camphor.tar.gz'
 
@@ -52,7 +67,7 @@ def download_dataset(name: str, target_dir: PathLike):
         with tarfile.open(temp_file, "r") as ft:
             print("Reading archive files...")
             members = []
-            base_dir = os.path.commonprefix(ft.getnames())
+            base_dir = _common_parent(ft.getnames())
             for m in ft.getmembers():
                 if m.isfile():
                     # relative_to(base_dir) here gets rid of a common parent directory within the archive (if any),
