@@ -173,11 +173,11 @@ def get_scan_window_from_comment(comment: str) -> np.ndarray:
         sw = np.zeros((2, 3), dtype=np.float32)
         sw[1] = np.diag(vectors)
     elif match := re.match(
-        ".*scan window: \[\[\s*((?:[+-]?(?:[0-9]*\.)?[0-9]+(?:e[-+]?[0-9]+)?\s*){3})\],\s*\[\s*((?:[+-]?(?:[0-9]*\.)?[0-9]+(?:e[-+]?[0-9]+)?\s*){3})\]\].*",
+        r".*scan window: [\[(]{2}\s*((?:[+-]?(?:[0-9]*\.)?[0-9]+(?:e[-+]?[0-9]+)?,?\s*){3})[\])],\s*[\[(]\s*((?:[+-]?(?:[0-9]*\.)?[0-9]+(?:e[-+]?[0-9]+)?,?\s*){3})[\])]{2}.*",
         comment,
     ):
-        start = np.array([float(s) for s in match.group(1).split()])
-        end = np.array([float(s) for s in match.group(2).split()])
+        start = np.array([float(s.strip(',')) for s in match.group(1).split()])
+        end = np.array([float(s.strip(',')) for s in match.group(2).split()])
         sw = np.stack([start, end], axis=0)
     else:
         raise ValueError(f"Could not parse scan window in comment: `{comment}`")
@@ -203,24 +203,49 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[d
         Generator that yields sample dicts with the updated fields ``'X'``, ``'xyz'``, ``'sw'``.
     """
     for sample in src:
-        X, xyz, sw = [], None, None
+        X, Y, xyz, sw = [], [], None, None
         img_keys = []
         for key in sample.keys():
             if key[-3:] in ["jpg", "png"]:
-                X.append((int(key[:-4]), sample[key].rotate(-90)))
+                num = key[:-4]
+                if '.' in key:
+                    iz, channel = [int(n) for n in num.split('.')]
+                else:
+                    iz, channel = int(num), 0
+                for _ in range((channel + 1) - len(X)):
+                    X.append([])
+                X[channel].append((iz, sample[key].rotate(-90)))
                 img_keys.append(key)
+            elif key[-3:] == "npy":
+                match = re.match(r".*desc_(\d+)*.", key)
+                i_desc = int(match.group(1))
+                Y.append((i_desc, sample[key]))
             elif key == "xyz":
                 xyz, sw = sample[key]
-        X = sorted(X, key=(lambda x: x[0]), reverse=reverse)
-        X = [v[1] for v in X]
-        X = np.stack(X, axis=-1).astype(np.float32)
-        X = np.expand_dims(X, axis=0)
+
+        X_ = []
+        for x in X:
+            # For every channel, stack the z-dimension images into the last dimension
+            x = sorted(x, key=(lambda v: v[0]), reverse=reverse)
+            x = [v[1] for v in x]
+            x = np.stack(x, axis=-1).astype(np.float32)
+            X_.append(x)
+        X = np.stack(X_, axis=0)
+
+        Y = sorted(Y, key=(lambda v: v[0]), reverse=reverse)
+        Y = [v[1] for v in Y]
+        Y = np.stack(Y, axis=0)
+
         sw = np.expand_dims(sw, axis=0)
+
         for key in img_keys:
             del sample[key]
+
         sample["X"] = X
+        sample["Y"] = Y
         sample["xyz"] = xyz
         sample["sw"] = sw
+
         yield sample
 
 
@@ -241,6 +266,7 @@ def _collate_batch(batch: Iterable[dict]):
     Ys = samples.get("Y", [])
     sws = samples["sw"]
 
+    # Switch the batch and channel dimension around
     Xs = list(np.stack(Xs, axis=0).transpose(1, 0, 2, 3, 4))
     if len(Ys) > 0:
         Ys = list(np.stack(Ys, axis=0).transpose(1, 0, 2, 3))

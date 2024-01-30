@@ -37,7 +37,7 @@ class ASDAFMNet(nn.Module):
         n_out: int = 3,
         activation: nn.Module = nn.LeakyReLU(0.1),
         padding_mode: str = "replicate",
-        last_relu: bool | Tuple[bool, ...] = True,
+        last_relu: bool | Tuple[bool, ...] = [False, True, True],
         pretrained_weights: Optional[Literal["asdafm-light", "asdafm-heavy"]] = None,
     ):
         super().__init__()

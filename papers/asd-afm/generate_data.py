@@ -29,14 +29,23 @@ if __name__ == "__main__":
     data_dir = Path(f"./data_{dataset}/")
 
     # Define simulator and image descriptor parameters
-    scan_window = ((0, 0, 6.0), (15.875, 15.875, 8.0))
-    scan_dim = (128, 128, 20)
+    scan_window = ((0, 0, 6.0), (15.875, 15.875, 7.9))
+    scan_dim = (128, 128, 19)
     afmulator = AFMulator(pixPerAngstrome=5, scan_dim=scan_dim, scan_window=scan_window)
     aux_maps = [
         AtomicDisks(scan_dim=scan_dim, scan_window=scan_window, zmin=-1.2, zmax_s=-1.2, diskMode="sphere"),
         vdwSpheres(scan_dim=scan_dim, scan_window=scan_window, zmin=-1.5),
         HeightMap(scanner=afmulator.scanner, zmin=-2.0),
     ]
+    generator_arguments = {
+        "afmulator": afmulator,
+        "aux_maps": aux_maps,
+        "batch_size": 1,
+        "distAbove": 4.3,
+        "iZPPs": [8],
+        "Qs": [[-0.1, 0, 0, 0]],
+        "QZs": [[0, 0, 0, 0]],
+    }
     rotations = sphereTangentSpace(n=100)
 
     # Number of tar file shards for each set
@@ -73,7 +82,7 @@ if __name__ == "__main__":
     data_dir.mkdir(exist_ok=True, parents=True)
 
     # Download the dataset. The extraction may take a while since there are ~140k files.
-    download_dataset('ASD-AFM-molecules', mol_dir)
+    download_dataset("ASD-AFM-molecules", mol_dir)
 
     # Generate dataset
     start_time = time.perf_counter()
@@ -81,16 +90,7 @@ if __name__ == "__main__":
     total_len = len(train_molecules) + len(val_molecules) + len(test_molecules)
     for mode, molecules in zip(["train", "val", "test"], [train_molecules, val_molecules, test_molecules]):
         # Construct generator
-        generator = InverseAFMtrainer(
-            afmulator=afmulator,
-            aux_maps=aux_maps,
-            paths=molecules,
-            batch_size=1,
-            distAbove=5.0,
-            iZPPs=[8],
-            Qs=[[-0.1, 0, 0, 0]],
-            QZs=[[0, 0, 0, 0]],
-        )
+        generator = Trainer(paths=molecules, **generator_arguments)
         generator.augment_with_rotations_entropy(rotations, n_best_rotations=30)
 
         # Generate data
