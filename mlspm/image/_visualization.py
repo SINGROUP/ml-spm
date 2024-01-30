@@ -18,11 +18,12 @@ def make_prediction_plots(
 ):
     """
     Plot predictions/references for image descriptors.
+
     Arguments:
-        preds: Predicted maps. Each list element corresponds to one descriptor and is an array of shape (batch_size, x_dim, y_dim).
-        true: Reference maps. Each list element corresponds to one descriptor and is an array of shape (batch_size, x_dim, y_dim).
-        losses: Losses for each prediction. Array of shape (len(preds), batch_size).
-        descriptors: Names of descriptors. The name "ES" causes the coolwarm colormap to be used.
+        preds: Predicted maps. Each list element corresponds to one descriptor and is an array of shape ``(batch_size, x_dim, y_dim)``.
+        true: Reference maps. Each list element corresponds to one descriptor and is an array of shape ``(batch_size, x_dim, y_dim)``.
+        losses: Losses for each prediction. Array of shape ``(len(preds), batch_size)``.
+        descriptors: Names of descriptors. The name ``"ES"`` causes the coolwarm colormap to be used.
         outdir: Directory where images are saved.
         start_ind: Starting index for saved images.
         verbose: Whether to print output information.
