@@ -196,11 +196,12 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[d
 
             - ``'{000..0xx}.{jpg,png}'`` - :class:`PIL.Image.Image` of one slice of the simulation.
             - ``'xyz'`` - Tuple(:class:`np.ndarray`, :class:`np.ndarray`) of the xyz data and the scan window.
+            - ``'desc_{0..x}.npy'`` - optional :class:`np.ndarray` of image descriptors.
 
         reverse: Whether the order of the image stack is reversed.
 
     Returns:
-        Generator that yields sample dicts with the updated fields ``'X'``, ``'xyz'``, ``'sw'``.
+        Generator that yields sample dicts with the updated fields ``'X'``, ``'Y'``, ``'xyz'``, ``'sw'``.
     """
     for sample in src:
         X, Y, xyz, sw = [], [], None, None
@@ -232,9 +233,10 @@ def _rotate_and_stack(src: Iterable[dict], reverse: bool = False) -> Generator[d
             X_.append(x)
         X = np.stack(X_, axis=0)
 
-        Y = sorted(Y, key=(lambda v: v[0]), reverse=reverse)
-        Y = [v[1] for v in Y]
-        Y = np.stack(Y, axis=0)
+        if len(Y) > 0:
+            Y = sorted(Y, key=(lambda v: v[0]), reverse=reverse)
+            Y = [v[1] for v in Y]
+            Y = np.stack(Y, axis=0)
 
         sw = np.expand_dims(sw, axis=0)
 
