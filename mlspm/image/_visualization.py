@@ -85,6 +85,7 @@ def make_prediction_plots(
             if vmax == vmin == 0:
                 vmin = 0
                 vmax = 0.1
+            
             if rows == 2:
                 im1 = top_ax.imshow(p.T, vmax=vmax, vmin=vmin, cmap=cmap, origin="lower")
                 im2 = bottom_ax.imshow(t.T, vmax=vmax, vmin=vmin, cmap=cmap, origin="lower")
