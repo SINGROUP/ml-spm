@@ -270,7 +270,7 @@ def _collate_batch(batch: Iterable[dict]):
 
     # Switch the batch and channel dimension around
     Xs = list(np.stack(Xs, axis=0).transpose(1, 0, 2, 3, 4))
-    if len(Ys) > 0:
+    if len(Ys) > 0 and len(Ys[0]) > 0:
         Ys = list(np.stack(Ys, axis=0).transpose(1, 0, 2, 3))
     sws = list(np.stack(sws, axis=0).transpose(1, 0, 2, 3))
 

@@ -83,7 +83,7 @@ def _get_distributed() -> Tuple[int, int, int, Optional[dist.ProcessGroup]]:
             world_size = dist.get_world_size()
             local_rank = global_rank = dist.get_rank()
         group = dist.group.WORLD
-    except (RuntimeError, AssertionError):
+    except (RuntimeError, AssertionError, ValueError):
         world_size = 1
         group = None
     if world_size <= 1:
