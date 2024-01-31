@@ -7,6 +7,7 @@ from matplotlib.colors import Colormap
 
 # Make subpackage plotting tools also available
 from .graph._visualization import *
+from .image._visualization import *
 from .utils import _calc_plot_dim
 
 

@@ -7,6 +7,7 @@ Reference
    mlspm.data_loading
    mlspm.datasets
    mlspm.graph
+   mlspm.image
    mlspm.logging
    mlspm.losses
    mlspm.models

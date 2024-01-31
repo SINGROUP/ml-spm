@@ -72,7 +72,7 @@ class SyncedLoss(Joinable):
         assert self.world_size > 1, self.world_size
 
         if not shadow:
-            assert len(losses) == self.num_losses, losses
+            assert len(losses) == self.num_losses, (losses, self.num_losses)
 
             # We haven't joined yet
             Join.notify_join_context(self)

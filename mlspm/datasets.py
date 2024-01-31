@@ -13,22 +13,10 @@ DATASET_URLS = {
     "AFM-ice-Au111-bilayer": "https://zenodo.org/records/10049856/files/AFM-ice-Au111-bilayer.tar.gz?download=1",
     "AFM-ice-exp": "https://zenodo.org/records/10054847/files/exp_data_ice.tar.gz?download=1",
     "AFM-ice-relaxed": "https://zenodo.org/records/10362511/files/relaxed_structures.tar.gz?download=1",
+    "ASD-AFM-molecules": "https://zenodo.org/records/10562769/files/molecules.tar.gz?download=1",
+    "AFM-camphor-exp": "https://zenodo.org/records/10562769/files/afm_camphor.tar.gz?download=1",
 }
 
-
-def _is_within_directory(directory, target):
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
-    prefix = os.path.commonprefix([abs_directory, abs_target])
-    return prefix == abs_directory
-
-
-def _safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-    for member in tar.getmembers():
-        member_path = os.path.join(path, member.name)
-        if not _is_within_directory(path, member_path):
-            raise Exception("Attempted Path Traversal in Tar File")
-    tar.extractall(path, members, numeric_owner=numeric_owner)
 
 def _common_parent(paths):
     path_parts = [list(Path(p).parts) for p in paths]
@@ -41,21 +29,24 @@ def _common_parent(paths):
             break
     return common_part
 
+
 def download_dataset(name: str, target_dir: PathLike):
     """
     Download and unpack a dataset to a target directory.
 
     The following datasets are available:
-    
+
         - ``'AFM-ice-Cu111'``: https://doi.org/10.5281/zenodo.10047850
         - ``'AFM-ice-Au111-monolayer'``: https://doi.org/10.5281/zenodo.10049832
         - ``'AFM-ice-Au111-bilayer'``: https://doi.org/10.5281/zenodo.10049856
         - ``'AFM-ice-exp'``: https://doi.org/10.5281/zenodo.10054847
         - ``'AFM-ice-relaxed'``: https://doi.org/10.5281/zenodo.10362511
+        - ``'ASD-AFM-molecules'``: https://doi.org/10.5281/zenodo.10562769 - 'molecules.tar.gz'
+        - ``'AFM-camphor-exp'``: https://doi.org/10.5281/zenodo.10562769 - 'afm_camphor.tar.gz'
 
     Arguments:
-        name: Name of dataset to download.
-        target_dir: Directory where dataset will be unpacked into. The directory and its parents will be created if they
+        name: Name of the dataset to download.
+        target_dir: Directory where the dataset will be unpacked into. The directory and its parents will be created if they
             do not exist already. If the directory already exists and is not empty, then the operation is aborted.
     """
     try:
@@ -86,4 +77,4 @@ def download_dataset(name: str, target_dir: PathLike):
             print(f"Extracting dataset to `{target_dir}`: ", end="", flush=True)
             for i, m in enumerate(members):
                 _print_progress(i, 1, len(members) - 1)
-                _safe_extract(ft, target_dir, [m])
+                ft.extract(m, target_dir)

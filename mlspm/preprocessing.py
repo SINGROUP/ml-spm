@@ -1,5 +1,5 @@
 import random
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import scipy.ndimage as nimg
@@ -210,3 +210,15 @@ def interpolate_and_crop(
         Xs[k] = Xs_[:, x_start:x_end, y_start:y_end]
 
     return Xs
+
+
+def minimum_to_zero(Ys: List[np.ndarray]):
+    '''
+    Shift values in arrays such that minimum is at zero. In-place operation.
+
+    Arguments:
+        Ys: Arrays of shape (batch_size, ...).
+    '''
+    for Y in Ys:
+        for j in range(Y.shape[0]):
+            Y[j] -= Y[j].min()

@@ -654,9 +654,9 @@ class GraphImgNetIce(GraphImgNet):
 
     Three sets of pretrained weights are available:
 
-        - 'cu111'
-        - 'au111-monolayer'
-        - 'au111-bilayer'
+        - ``'cu111'``: trained on images of ice clusters on Cu(111)
+        - ``'au111-monolayer'``: trained on images of ice clusters on monolayer Au(111)
+        - ``'au111-bilayer'``: trained on images of ice clusters on bilayer Au(111)
 
     Arguments:
         pretrained_weights: Name of pretrained weights. If specified, load pretrained weights. Otherwise, weights are initialized

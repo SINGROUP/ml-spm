@@ -13,7 +13,6 @@ def _get_padding(kernel_size: int | Tuple[int, ...], nd: int) -> Tuple[int, ...]
         padding += [(kernel_size[i] - 1) // 2]
     return tuple(padding)
 
-
 class _ConvNdBlock(nn.Module):
     def __init__(
         self,
