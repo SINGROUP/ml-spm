@@ -29,4 +29,5 @@ pip install .
 
 ## Papers
 The [`papers`](papers) subdirectory contains training scripts and datasets for specific publications. Currently we have the following:
+- [Automated structure discovery in atomic force microscopy](papers/asd-afm)
 - [Structure discovery in Atomic Force Microscopy imaging of ice](papers/ice_structure_discovery)
