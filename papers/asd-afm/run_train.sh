@@ -27,7 +27,7 @@ torchrun \
         --train True \
         --test True \
         --predict True \
-        --epochs 1 \
+        --epochs 50 \
         --num_workers $N_WORKERS \
         --batch_size $BATCH_SIZE \
         --avg_best_epochs 3 \
@@ -36,5 +36,3 @@ torchrun \
         --loss_labels "Atomic Disks" "vdW Spheres" "Height Map" \
         --loss_weights 20.0 0.2 0.1 \
         --timings
-
-# epochs 50
