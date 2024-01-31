@@ -24,7 +24,7 @@ from mlspm.models import ASDAFMNet
 
 
 def make_model(device, cfg):
-    model = ASDAFMNet(n_out=3).to(device)
+    model = ASDAFMNet(n_out=3, last_relu=[False, False, True]).to(device)
     criterion = WeightedMSELoss(cfg["loss_weights"])
     optimizer = optim.Adam(model.parameters(), lr=cfg["lr"])
     lr_decay_rate = 1e-5
@@ -246,7 +246,7 @@ def run(cfg):
         if cfg["global_rank"] == 0:
             print(f"\n ========= Testing with model from epoch {checkpointer.best_epoch}")
 
-        eval_losses = SyncedLoss(num_losses=len(cfg["loss_labels"]))
+        eval_losses = SyncedLoss(num_losses=len(loss_logger.loss_labels))
         eval_start = time.perf_counter()
         if cfg["timings"] and cfg["global_rank"] == 0:
             t0 = eval_start
