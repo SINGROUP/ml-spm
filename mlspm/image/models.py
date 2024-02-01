@@ -396,7 +396,6 @@ class EDAFMNet(AttentionUNet):
     Arguments:
         device: Device to load model onto.
         trained_weights: If not None, load the specified pretrained weights to the model.
-        weights_dir: If **weights_type** is not None, the directory where the weights will be downloaded into.
     """
 
     def __init__(
@@ -405,7 +404,6 @@ class EDAFMNet(AttentionUNet):
         pretrained_weights: Optional[
             Literal["base", "single-channel", "CO-Cl", "Xe-Cl", "constant-noise", "uniform-noise", "no-gradient", "matched-tips"]
         ] = None,
-        weights_dir: PathLike = "./weights",
     ):
         if pretrained_weights == "single-channel":
             n_in = 1
@@ -440,7 +438,7 @@ class EDAFMNet(AttentionUNet):
         )
 
         if pretrained_weights:
-            weights_path = download_weights(f"ed-afm-{pretrained_weights}", weights_dir)
+            weights_path = download_weights(f"edafm-{pretrained_weights}")
             self.load_state_dict(torch.load(weights_path))
 
 

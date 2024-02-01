@@ -28,11 +28,11 @@ In `EDAFMNet` one can also specify pretrained weights of several types to downlo
  - 'no-gradient': Model trained without background-gradient augmentation.
  - 'matched-tips': Model trained on data with matched tip distance between CO and Xe, instead of independently randomized distances.
 
-The model weights can also be downloaded directly from https://www.dropbox.com/sh/1jd4h7ovpafg3uk/AACQX6C6Nks6RxGbvqb6vIo-a?dl=0. The weights are saved in the state_dict format of PyTorch.
+The model weights can also be downloaded directly from https://doi.org/10.5281/zenodo.10606273. The weights are saved in the state_dict format of PyTorch.
 
 ## Data and model training
 
-We don't provide the full training/validation/test sets for download because they are very large (~1TiB in total). Instead, we provide the database of molecular geometries that can be used to generate the full dataset using ProbeParticleModel. The provided script `generate_data.py` does the data generation and will download the molecule database automatically. Alternatively, the molecule database can be downloaded directly from https://www.dropbox.com/s/z4113upq82puzht/Molecules_rebias_210611.tar.gz?dl=0. 
+We don't provide the full training/validation/test sets for download because they are very large (~1TiB in total). Instead, we provide the database of molecular geometries that can be used to generate the full dataset using ProbeParticleModel. The provided script `generate_data.py` does the data generation and will download the molecule database automatically. Alternatively, the molecule database can be downloaded directly from https://doi.org/10.5281/zenodo.10606443.
 
 The model training can be done using the provided script `train.py`. Note that performing the training using all the same settings as we used requires a significant amount of time and also a significant amount VRAM on the GPU, likely more than can be found on a single GPU. In our case the model training took ~5 days using 4 x Nvidia Tesla V100 (32GB) GPUs. However, inference on the trained model can be done even on a single lower-end GPU or on CPU.
 
