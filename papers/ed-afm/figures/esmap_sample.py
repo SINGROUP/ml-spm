@@ -7,6 +7,7 @@ import ppafm.ml.AuxMap as aux
 import ppafm.ocl.field as FFcl
 import ppafm.ocl.oclUtils as oclu
 
+from mlspm.datasets import download_dataset
 from mlspm.utils import read_xyzs
 
 if __name__ == "__main__":
@@ -19,6 +20,9 @@ if __name__ == "__main__":
     height = 4
     zmin = -2.0
     Rpp = 1.0
+
+    # Download data if not already there
+    download_dataset("ED-AFM-data", data_dir)
 
     # Initialize OpenCL environment on GPU
     env = oclu.OCLEnvironment(i_platform=0)

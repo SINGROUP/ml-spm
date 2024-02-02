@@ -7,6 +7,7 @@ import torch
 from matplotlib import cm
 
 import mlspm.preprocessing as pp
+from mlspm.datasets import download_dataset
 from mlspm.models import EDAFMNet
 
 # # Set matplotlib font rendering to use LaTex
@@ -35,6 +36,9 @@ if __name__ == "__main__":
     fig_width   = 150                   # Figure width in mm
     fontsize    = 8
     dpi         = 300
+
+    # Download data if not already there
+    download_dataset("ED-AFM-data", data_dir)
 
     # Load model
     model = EDAFMNet(device=device, pretrained_weights="base")

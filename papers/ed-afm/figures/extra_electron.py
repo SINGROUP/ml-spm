@@ -11,6 +11,7 @@ from ppafm.ml.Generator import InverseAFMtrainer
 from ppafm.ocl.AFMulator import AFMulator
 
 import mlspm.preprocessing as pp
+from mlspm.datasets import download_dataset
 
 # # Set matplotlib font rendering to use LaTex
 # plt.rcParams.update({
@@ -54,6 +55,9 @@ if __name__ == "__main__":
     fig_width   = 100               # Figure width in mm
     fontsize    = 8
     dpi         = 300
+
+    # Download data if not already there
+    download_dataset("ED-AFM-data", data_dir)
 
     # Initialize OpenCL environment on GPU
     env = oclu.OCLEnvironment( i_platform = 0 )
