@@ -81,5 +81,10 @@ dmypy.json
 # VS Code
 .vscode
 
+# Tex
+*.aux
+*.log
+*.pdf
+
 # Other
 molecules

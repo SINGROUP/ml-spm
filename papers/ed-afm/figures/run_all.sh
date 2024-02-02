@@ -7,6 +7,7 @@ python water.py
 python surface_sims_bcb_water.py
 pdflatex model_schem.tex
 python stats.py
+python stats_spring_constants.py
 python esmap_sample.py
 pdflatex esmap_schem.tex
 python afm_stacks.py
