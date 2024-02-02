@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # Define simulator and image descriptor parameters
     scan_window = ((0, 0, 6.0), (15.875, 15.875, 7.9))
     scan_dim = (128, 128, 19)
-    afmulator = AFMulator(pixPerAngstrome=5, scan_dim=scan_dim, scan_window=scan_window)
+    afmulator = AFMulator(pixPerAngstrome=5, scan_dim=scan_dim, scan_window=scan_window, tipR0=[0.0, 0.0, 4.0])
     aux_maps = [
         AtomicDisks(scan_dim=scan_dim, scan_window=scan_window, zmin=-1.2, zmax_s=-1.2, diskMode="sphere"),
         vdwSpheres(scan_dim=scan_dim, scan_window=scan_window, zmin=-1.5),
@@ -41,7 +41,7 @@ if __name__ == "__main__":
         "afmulator": afmulator,
         "aux_maps": aux_maps,
         "batch_size": 1,
-        "distAbove": 4.3,
+        "distAbove": 5.25,
         "iZPPs": [8],
         "Qs": [[-0.1, 0, 0, 0]],
         "QZs": [[0, 0, 0, 0]],
