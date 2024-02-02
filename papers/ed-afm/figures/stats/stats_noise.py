@@ -17,6 +17,7 @@ from mlspm.datasets import download_dataset
 from mlspm.models import EDAFMNet
 
 if __name__ == "__main__":
+
     # # Normal noise model
     # model_type      = 'base'                    # Type of pretrained weights to use
     # save_file       = Path('mse_normal.csv')    # File to save MSE values into
@@ -39,17 +40,10 @@ if __name__ == "__main__":
 
     afmulator_args = {
         'pixPerAngstrome'   : 20,
-        'lvec'              : np.array([
-                                [ 0.0,  0.0, 0.0],
-                                [20.0,  0.0, 0.0],
-                                [ 0.0, 20.0, 0.0],
-                                [ 0.0,  0.0, 5.0]
-                                ]),
         'scan_dim'          : (128, 128, 20),
         'scan_window'       : ((2.0, 2.0, 6.0), (18.0, 18.0, 8.0)),
-        'amplitude'         : 1.0,
         'df_steps'          : 10,
-        'initFF'            : True
+        'tipR0'             : [0.0, 0.0, 4.0]
     }
 
     generator_kwargs = {
@@ -115,7 +109,7 @@ if __name__ == "__main__":
             X_ = [torch.from_numpy(x).unsqueeze(1).to(device) for x in X_]
 
             with torch.no_grad():
-                pred, _ = model(X)
+                pred, _ = model(X_)
                 pred = pred[0]
 
             diff = pred - ref[0]
