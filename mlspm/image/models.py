@@ -73,7 +73,7 @@ class AttentionUNet(nn.Module):
         upscale2d_block_channels2: List[int] = [16, 16, 16],
         upscale2d_block_depth2: int = 2,
         split_conv_block_channels: List[int] = [16],
-        split_conv_block_depth: List[int] = [3],
+        split_conv_block_depth: int = 3,
         res_connections: bool = True,
         out_convs_channels: int | List[int] = 1,
         out_relus: bool | List[bool] = True,
