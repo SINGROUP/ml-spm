@@ -1,3 +1,3 @@
-from .graph.models import PosNet, GraphImgNet, GraphImgNetIce
-from .image.models import ASDAFMNet
 from ._weights import download_weights
+from .graph.models import GraphImgNet, GraphImgNetIce, PosNet
+from .image.models import ASDAFMNet, AttentionUNet, EDAFMNet

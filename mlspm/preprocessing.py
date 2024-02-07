@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import numpy as np
 import scipy.ndimage as nimg
@@ -213,12 +213,136 @@ def interpolate_and_crop(
 
 
 def minimum_to_zero(Ys: List[np.ndarray]):
-    '''
+    """
     Shift values in arrays such that minimum is at zero. In-place operation.
 
     Arguments:
         Ys: Arrays of shape (batch_size, ...).
-    '''
+    """
     for Y in Ys:
         for j in range(Y.shape[0]):
             Y[j] -= Y[j].min()
+
+
+def add_rotation_reflection(
+    X: List[np.ndarray],
+    Y: List[np.ndarray],
+    reflections: bool = True,
+    multiple: int = 2,
+    crop: Optional[Tuple[int]] = None,
+    per_batch_item: bool = False,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Augment batch with random rotations and reflections.
+
+    Arguments:
+        X: AFM images to augment. Each array should be of shape ``(batch_size, x, y, z)``.
+        Y: Reference image descriptors to augment. Each array should be of shape ``(batch, x, y)``.
+        reflections: Whether to augment with reflections. If True, each rotation is randomly reflected with 50% probability.
+        multiple: Multiplier for how many rotations to generate for every sample.
+        crop: If not None, then output batch is cropped to specified size ``(x_size, y_size)`` in the middle of the image.
+        per_batch_item: If True, rotation is randomized per batch item, otherwise same rotation for all.
+
+    Returns:
+        Tuple (**X**, **Y**), where
+
+        - **X** - Batch of rotation-augmented AFM images of shape ``(batch*multiple, x_new, y_new, z)``.
+        - **Y** - Batch of rotation-augmented reference image descriptors of shape ``(batch*multiple, x_new, y_new)``
+    """
+
+    X_aug = [[] for _ in range(len(X))]
+    Y_aug = [[] for _ in range(len(Y))]
+
+    for _ in range(multiple):
+        if per_batch_item:
+            rotations = 360 * np.random.rand(len(X[0]))
+        else:
+            rotations = [360 * np.random.rand()] * len(X[0])
+        if reflections:
+            flip = np.random.randint(2)
+        for k, x in enumerate(X):
+            x = x.copy()
+            for i in range(x.shape[0]):
+                for j in range(x.shape[-1]):
+                    x[i, :, :, j] = np.array(Image.fromarray(x[i, :, :, j]).rotate(rotations[i], resample=Image.BICUBIC))
+            if flip:
+                x = x[:, :, ::-1]
+            X_aug[k].append(x)
+        for k, y in enumerate(Y):
+            y = y.copy()
+            for i in range(y.shape[0]):
+                y[i, :, :] = np.array(Image.fromarray(y[i, :, :]).rotate(rotations[i], resample=Image.BICUBIC))
+            if flip:
+                y = y[:, :, ::-1]
+            Y_aug[k].append(y)
+
+    X = [np.concatenate(x, axis=0) for x in X_aug]
+    Y = [np.concatenate(y, axis=0) for y in Y_aug]
+
+    if crop is not None:
+        x_start = (X[0].shape[1] - crop[0]) // 2
+        y_start = (X[0].shape[2] - crop[1]) // 2
+        X = [x[:, x_start : x_start + crop[0], y_start : y_start + crop[1]] for x in X]
+        Y = [y[:, x_start : x_start + crop[0], y_start : y_start + crop[1]] for y in Y]
+
+    return X, Y
+
+
+def random_crop(
+    X: List[np.ndarray],
+    Y: List[np.ndarray],
+    min_crop: float = 0.5,
+    max_aspect: float = 2.0,
+    multiple: int = 8,
+    distribution: Literal["flat", "exp-log"] = "flat",
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Randomly crop images in a batch to a different size and aspect ratio.
+
+    Arguments:
+        X: AFM images to crop. Each array should be of shape ``(batch_size, x, y, z)``.
+        Y: Reference image descriptors to crop. Each array should be of shape ``(batch, x, y)``.
+        min_crop: Minimum crop size as a fraction of the original size.
+        max_aspect: Maximum aspect ratio for crop. Cannot be more than 1/min_crop.
+        multiple: The crop size is rounded down to the specified integer multiple.
+        distribution: 'flat' or 'exp-log'. How aspect ratios are distributed. If 'flat', then distribution is random uniform
+            between (1, max_aspect) and half of time is flipped. If 'exp-log', then distribution is exp of log of uniform
+            distribution over (1/max_aspect, max_aspect). 'exp-log' is more biased towards square aspect ratios.
+
+    Returns:
+        Tuple (**X**, **Y**), where
+
+        - **X** - Batch of cropped AFM images of shape ``(batch, x_new, y_new, z)``.
+        - **Y** - Batch of cropped reference image descriptors of shape ``(batch, x_new, y_new)``.
+    """
+    assert 0 < min_crop <= 1.0
+    assert max_aspect >= 1.0
+    assert 1 / min_crop >= max_aspect
+
+    if distribution == "flat":
+        aspect = np.random.uniform(1, max_aspect)
+        if np.random.rand() > 0.5:
+            aspect = 1 / aspect
+    elif distribution == "exp-log":
+        aspect = np.exp(np.random.uniform(np.log(1 / max_aspect), np.log(max_aspect)))
+    else:
+        raise ValueError(f"Unrecognized aspect ratio distribution {distribution}")
+
+    x_size, y_size = X[0].shape[1], X[0].shape[2]
+    if aspect > 1.0:
+        height = int(np.random.uniform(int(min_crop * y_size), int(y_size / aspect)))
+        width = int(height * aspect)
+    else:
+        width = int(np.random.uniform(int(min_crop * x_size), int(x_size * aspect)))
+        height = int(width / aspect)
+
+    width = width - (width % multiple)
+    height = height - (height % multiple)
+
+    start_x = int(np.random.uniform(0, x_size - width - 1e-6))
+    start_y = int(np.random.uniform(0, y_size - height - 1e-6))
+
+    X = [x[:, start_x : start_x + width, start_y : start_y + height] for x in X]
+    Y = [y[:, start_x : start_x + width, start_y : start_y + height] for y in Y]
+
+    return X, Y

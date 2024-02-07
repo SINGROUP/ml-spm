@@ -15,6 +15,8 @@ DATASET_URLS = {
     "AFM-ice-relaxed": "https://zenodo.org/records/10362511/files/relaxed_structures.tar.gz?download=1",
     "ASD-AFM-molecules": "https://zenodo.org/records/10562769/files/molecules.tar.gz?download=1",
     "AFM-camphor-exp": "https://zenodo.org/records/10562769/files/afm_camphor.tar.gz?download=1",
+    "ED-AFM-molecules": "https://zenodo.org/records/10609676/files/molecules_rebias.tar.gz?download=1",
+    "ED-AFM-data": "https://zenodo.org/records/10609676/files/edafm-data.tar.gz?download=1",
 }
 
 
@@ -43,6 +45,8 @@ def download_dataset(name: str, target_dir: PathLike):
         - ``'AFM-ice-relaxed'``: https://doi.org/10.5281/zenodo.10362511
         - ``'ASD-AFM-molecules'``: https://doi.org/10.5281/zenodo.10562769 - 'molecules.tar.gz'
         - ``'AFM-camphor-exp'``: https://doi.org/10.5281/zenodo.10562769 - 'afm_camphor.tar.gz'
+        - ``'ED-AFM-molecules'``: https://doi.org/10.5281/zenodo.10609676 - 'molecules_rebias.tar.gz'
+        - ``'ED-AFM-data'``: https://doi.org/10.5281/zenodo.10609676 - 'edafm-data.tar.gz'
 
     Arguments:
         name: Name of the dataset to download.

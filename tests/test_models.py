@@ -256,6 +256,7 @@ def test_GraphImgNet():
 
     # fmt:on
 
+
 def test_ASDAFMNet():
 
     import torch
@@ -272,3 +273,39 @@ def test_ASDAFMNet():
     assert ys[0].shape == ys[1].shape == ys[2].shape == (5, 128, 128)
     assert ys[1].min() >= 0.0
     assert ys[2].min() >= 0.0
+
+
+def test_AttentionUnet():
+
+    import torch
+    from mlspm.image.models import AttentionUNet
+
+    torch.manual_seed(0)
+
+    device = "cpu"
+
+    for z_in in range(6, 15):
+
+        model = AttentionUNet(
+            z_in=z_in,
+            n_in=2,
+            n_out=3,
+            in_channels=1,
+            merge_block_channels=[2],
+            conv3d_block_channels=[2, 4, 8],
+            conv2d_block_channels=[32],
+            attention_channels= [4, 8, 6],
+            pool_z_strides=[2, 1, 2],
+            device=device
+        )
+
+        x = [torch.rand((5, 1, 128, 128, z_in)).to(device), torch.rand((5, 1, 128, 128, z_in)).to(device)]
+        ys, att = model(x)
+
+        assert len(ys) == 3
+        assert ys[0].shape == ys[1].shape == ys[2].shape == (5, 128, 128)
+
+        assert len(att) == 3
+        assert att[0].shape == (5, 32, 32)
+        assert att[1].shape == (5, 64, 64)
+        assert att[2].shape == (5, 128, 128)

@@ -17,4 +17,12 @@ mlspm.models
     
     Alias of :class:`mlspm.image.models.ASDAFMNet`
 
+.. class:: mlspm.models.AttentionUNet
+    
+    Alias of :class:`mlspm.image.models.AttentionUNet`
+
+.. class:: mlspm.models.EDAFMNet
+    
+    Alias of :class:`mlspm.image.models.EDAFMNet`
+
 .. autofunction:: mlspm.models.download_weights
