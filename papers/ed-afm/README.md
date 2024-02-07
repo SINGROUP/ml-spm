@@ -35,7 +35,7 @@ The model weights can also be downloaded directly from https://doi.org/10.5281/z
 
 We provide a database of molecular geometries that can be used to generate the full dataset using [`ppafm`](https://github.com/Probe-Particle/ppafm). The provided script `generate_data.py` does the data generation and will download the molecule database automatically. Alternatively, the molecule database can be downloaded directly from https://doi.org/10.5281/zenodo.10609676.
 
-The model training can be done using the provided script `train.py`. Note that performing the training using all the same settings as we used requires a significant amount of time and also a significant amount VRAM on the GPU, likely more than can be found on a single GPU. In our case the model training took ~5 days using 4 x Nvidia Tesla V100 (32GB) GPUs. However, inference on the trained model can be done even on a single lower-end GPU or on CPU.
+After generating the dataset, the model training can be done using the provided script `run_train.sh`, which calls the actual training script `train.py` with the appropriate parameters. Note that performing the training using all the same settings as we used requires a significant amount of time and also a significant amount VRAM on the GPU, likely more than can be found on a single GPU. In our case the model training took ~5 days using 4 x Nvidia Tesla V100 (32GB) GPUs. However, inference on the trained model can be done even on a single lower-end GPU or on CPU.
 
 All the data used for the predictions in the paper can be found at https://doi.org/10.5281/zenodo.10609676.
 
