@@ -1,4 +1,3 @@
-from os import PathLike
 from typing import List, Literal, Optional, Tuple
 
 import torch
@@ -21,11 +20,10 @@ class AttentionUNet(nn.Module):
     by concatenating along channel axis.
 
     Arguments:
-        conv3d_in_channels: Number of channels in input.
-        conv2d_in_channels: Number of channels in first 2D conv layer after flattening 3D to 2D.
-        conv3d_out_channels: Number of channels after 3D-to-2D flattening after each 3D conv block. Depends on input z size.
+        z_in: Size of input array in the z-dimension.
         n_in: Number of input 3D images.
         n_out: Number of output 2D maps.
+        in_channels: Number of channels in input array.
         merge_block_channels: Number of channels in input merging 3D conv blocks.
         merge_block_depth: Number of layers in each merge conv block.
         conv3d_block_channels: Number channels in 3D conv blocks.
@@ -54,11 +52,10 @@ class AttentionUNet(nn.Module):
 
     def __init__(
         self,
-        conv3d_in_channels: int,
-        conv2d_in_channels: int,
-        conv3d_out_channels: List[int],
+        z_in: int = 10,
         n_in: int = 1,
         n_out: int = 3,
+        in_channels: int = 1,
         merge_block_channels: List[int] = [8],
         merge_block_depth: int = 2,
         conv3d_block_channels: List[int] = [8, 16, 32],
@@ -88,7 +85,6 @@ class AttentionUNet(nn.Module):
 
         assert (
             len(conv3d_block_channels)
-            == len(conv3d_out_channels)
             == len(conv3d_dropouts)
             == len(upscale2d_block_channels)
             == len(upscale2d_block_channels2)
@@ -119,13 +115,23 @@ class AttentionUNet(nn.Module):
         self.out_relus = out_relus
         self.relu_act = nn.ReLU()
 
+        # Infer number of channels after 3D-to-2D flattening at each stage from the z_in size
+        z_size = z_in
+        attention_in_channels = []
+        for pool_stride, conv3d_channels in zip(pool_z_strides, conv3d_block_channels):
+            attention_in_channels.append(conv3d_channels * z_size)
+            z_size = z_size // pool_stride
+            z_size -= max(0, 2 - pool_stride)
+        conv2d_in_channels = conv3d_block_channels[-1] * z_size
+        attention_in_channels = list(reversed(attention_in_channels))
+
         # -- Input merge conv blocks --
         self.merge_convs = nn.ModuleList([None] * n_in)
         for i in range(n_in):
             self.merge_convs[i] = nn.ModuleList(
                 [
                     Conv3dBlock(
-                        conv3d_in_channels,
+                        in_channels,
                         merge_block_channels[0],
                         3,
                         merge_block_depth,
@@ -207,7 +213,7 @@ class AttentionUNet(nn.Module):
 
         # -- Decoder conv blocks --
         self.attentions = nn.ModuleList([])
-        for c_att, c_conv in zip(attention_channels, reversed(conv3d_out_channels)):
+        for c_att, c_conv in zip(attention_channels, attention_in_channels):
             self.attentions.append(
                 UNetAttentionConv(
                     c_conv, conv2d_block_channels[-1], c_att, 3, padding_mode, self.act, attention_activation, upsample_mode="bilinear"
@@ -246,7 +252,7 @@ class AttentionUNet(nn.Module):
         for i in range(len(upscale2d_block_channels2)):
             self.upscale2d_blocks2.append(
                 Conv2dBlock(
-                    upscale2d_block_channels[i] + conv3d_out_channels[-(i + 1)],
+                    upscale2d_block_channels[i] + attention_in_channels[i],
                     upscale2d_block_channels2[i],
                     3,
                     upscale2d_block_depth2,
@@ -312,12 +318,19 @@ class AttentionUNet(nn.Module):
     def _flatten(self, x):
         return x.permute(0, 1, 4, 2, 3).reshape(x.size(0), -1, x.size(2), x.size(3))
 
-    def forward(self, x: List[torch.Tensor]):
+    def forward(self, x: List[torch.Tensor]) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
         Do forward computation.
 
         Arguments:
-            x: Input AFM images of shape (batch, channels, )
+            x: Input AFM images of shape (batch, channels, x, y, z).
+
+        Returns:
+            Tuple (**outputs**, **attention_maps**), where
+
+            - **outputs** - Output arrays of shape ``(batch, out_convs_channels, x, y)`` or ``(batch, x, y)`` if
+              out_convs_channels == 1.
+            - **attention_maps** - Attention maps at each stage of skip-connections.
         """
         assert len(x) == self.n_in
 
@@ -411,19 +424,18 @@ class EDAFMNet(AttentionUNet):
             n_in = 2
 
         super().__init__(
-            conv3d_in_channels=1,
-            conv2d_in_channels=192,
+            z_in=6,
+            n_in=n_in,
+            n_out=1,
+            in_channels=1,
             merge_block_channels=[32],
             merge_block_depth=2,
-            conv3d_out_channels=[288, 288, 384],
             conv3d_dropouts=[0.0, 0.0, 0.0],
             conv3d_block_channels=[48, 96, 192],
             conv3d_block_depth=3,
             conv2d_block_channels=[512],
             conv2d_block_depth=3,
             conv2d_dropouts=[0.0],
-            n_in=n_in,
-            n_out=1,
             upscale2d_block_channels=[256, 128, 64],
             upscale2d_block_depth=2,
             upscale2d_block_channels2=[256, 128, 64],

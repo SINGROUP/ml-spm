@@ -315,7 +315,7 @@ def run(cfg):
                 pred, _ = model(X)
 
                 # Data back to host
-                X = X.squeeze(1).cpu().numpy()
+                X = [x.squeeze(1).cpu().numpy() for x in X]
                 pred = [p.cpu().numpy() for p in pred]
                 ref = [r.cpu().numpy() for r in ref]
 
@@ -323,7 +323,7 @@ def run(cfg):
                 utils.batch_write_xyzs(xyz, outdir=pred_dir, start_ind=counter)
 
                 # Visualize input AFM images and predictions
-                vis.make_input_plots([X], outdir=pred_dir, start_ind=counter)
+                vis.make_input_plots(X, outdir=pred_dir, start_ind=counter)
                 vis.make_prediction_plots(pred, ref, descriptors=cfg["loss_labels"], outdir=pred_dir, start_ind=counter)
 
                 counter += len(X[0])
@@ -336,7 +336,7 @@ def run(cfg):
 
 
 if __name__ == "__main__":
-    
+
     # Get config
     cfg = parse_args()
     run_dir = Path(cfg["run_dir"])

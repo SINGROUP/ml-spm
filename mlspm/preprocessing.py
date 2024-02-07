@@ -231,7 +231,7 @@ def add_rotation_reflection(
     multiple: int = 2,
     crop: Optional[Tuple[int]] = None,
     per_batch_item: bool = False,
-):
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Augment batch with random rotations and reflections.
 
@@ -295,7 +295,7 @@ def random_crop(
     max_aspect: float = 2.0,
     multiple: int = 8,
     distribution: Literal["flat", "exp-log"] = "flat",
-):
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Randomly crop images in a batch to a different size and aspect ratio.
 
@@ -309,7 +309,7 @@ def random_crop(
             between (1, max_aspect) and half of time is flipped. If 'exp-log', then distribution is exp of log of uniform
             distribution over (1/max_aspect, max_aspect). 'exp-log' is more biased towards square aspect ratios.
 
-    Returns: 
+    Returns:
         Tuple (**X**, **Y**), where
 
         - **X** - Batch of cropped AFM images of shape ``(batch, x_new, y_new, z)``.

@@ -88,3 +88,4 @@ dmypy.json
 
 # Other
 molecules
+*.csv
