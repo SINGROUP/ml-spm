@@ -52,7 +52,7 @@ class AttentionUNet(nn.Module):
 
     def __init__(
         self,
-        z_in: int = 10,
+        z_in: int,
         n_in: int = 1,
         n_out: int = 3,
         in_channels: int = 1,
