@@ -6,7 +6,7 @@ import tarfile
 import time
 from os import PathLike
 from pathlib import Path
-from typing import Optional, TypedDict, NotRequired
+from typing import Optional, TypedDict
 
 import numpy as np
 from PIL import Image
@@ -109,7 +109,7 @@ def get_tarinfo(fname: str, file_bytes: io.BytesIO):
     info.mtime = time.time()
     return info
 
-class TarSample(TypedDict):
+class TarSample(TypedDict, total=False):
     """
     - ``'hartree'``: Path to the Hartree potential. First item in the tuple is the path
       to the tar file relative to ``base_path``, and second entry is the tar file member name.
@@ -118,7 +118,7 @@ class TarSample(TypedDict):
     - ``'rots'``: List of rotations to generate for the sample.
     """
     hartree: tuple[str, str]
-    rho: NotRequired[tuple[str, str]]
+    rho: tuple[str, str]
     rots: list[np.ndarray]
 
 class TarDataGenerator:
