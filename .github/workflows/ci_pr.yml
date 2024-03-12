@@ -21,6 +21,7 @@ jobs:
           run: |
               bash ./build.sh
               pip install -e .[dev]
+              pip install pocl-binary-distribution  # Required for test that use ppafm opencl functionality
 
         - name: Run pytest
           run: pytest --junitxml=pytest.xml --cov-report=term-missing --cov mlspm tests | tee pytest-coverage.txt

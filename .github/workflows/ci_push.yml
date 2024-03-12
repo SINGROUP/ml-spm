@@ -24,6 +24,7 @@ jobs:
           run: |
               bash ./build.sh
               pip install -e .[dev]
+              pip install pocl-binary-distribution  # Required for test that use ppafm opencl functionality
 
         - name: Lint with flake8
           run: flake8 .
