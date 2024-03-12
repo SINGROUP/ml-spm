@@ -133,11 +133,15 @@ class TarDataGenerator:
 
     The npz files should contain the following entries:
 
-        - ``'array'``: An array containing the potential/density on a 3D grid.
+        - ``'data'``: An array containing the potential/density on a 3D grid. The potential is assumed to be in
+          units of eV and density in units of e/Å^3.
         - ``'origin'``: Lattice origin in 3D space as an array of shape ``(3,)``.
         - ``'lattice'``: Lattice vectors as an array of shape ``(3, 3)``, where the rows are the vectors.
         - ``'xyz'``: Atom xyz coordinates as an array of shape ``(n_atoms, 3)``.
         - ``'Z'``: Atom atomic numbers as an array of shape ``(n_atoms,)``.
+
+    Note: it is recommended to use ``multiprocessing.set_start_method('spawn')`` when using the :class:`TarDataGenerator`.
+    Otherwise a lot of warnings about leaked memory objects may be thrown on exit.
 
     Arguments:
         samples: List of sample dicts as :class:`TarSampleList`. File paths should be relative to ``base_path``.
