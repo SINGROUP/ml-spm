@@ -24,6 +24,7 @@ dependencies = [
     "torch",
     "webdataset",
     "scikit-image",
+    "ppafm[opencl]"
 ]
 
 [project.urls]
