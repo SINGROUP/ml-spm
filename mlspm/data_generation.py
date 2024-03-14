@@ -139,6 +139,14 @@ class TarDataGenerator:
         - ``'lattice'``: Lattice vectors as an array of shape ``(3, 3)``, where the rows are the vectors.
         - ``'xyz'``: Atom xyz coordinates as an array of shape ``(n_atoms, 3)``.
         - ``'Z'``: Atom atomic numbers as an array of shape ``(n_atoms,)``.
+    
+    Yields dicts that contain the following:
+
+        - ``'xyzs'``: Atom xyz coordinates.
+        - ``'Zs'``: Atomic numbers.
+        - ``'qs'``: Sample Hartree potential.
+        - ``'rho_sample'``: Sample electron density if the sample dict contained ``rho``, or ``None`` otherwise.
+        - ``'rot'``: Rotation matrix.
 
     Note: it is recommended to use ``multiprocessing.set_start_method('spawn')`` when using the :class:`TarDataGenerator`.
     Otherwise a lot of warnings about leaked memory objects may be thrown on exit.
