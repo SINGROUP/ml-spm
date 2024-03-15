@@ -98,7 +98,7 @@ def test_tar_data_generator():
             rots.append([rot])
             names.append(name)
 
-    sample_list = [
+    sample_list_fdbm = [
         {
             "hartree": (tar_path_hartree, names),
             "rho": (tar_path_rho, names),
@@ -106,7 +106,7 @@ def test_tar_data_generator():
         }
     ]
 
-    generator = TarDataGenerator(sample_list, base_path='./', n_proc=1)
+    generator = TarDataGenerator(sample_list_fdbm, base_path='./', n_proc=1)
 
     for i_sample, sample in enumerate(generator):
         assert np.allclose(sample['xyzs'], xyzs[i_sample])
@@ -116,6 +116,24 @@ def test_tar_data_generator():
         assert np.allclose(sample['qs'].lvec, lvecs[i_sample])
         assert np.allclose(sample['rho_sample'].array, rhos[i_sample])
         assert np.allclose(sample['rho_sample'].lvec, lvecs[i_sample])
+
+
+    sample_list_hartree = [
+        {
+            "hartree": (tar_path_hartree, names),
+            "rho": None,
+            "rots": rots,
+        }
+    ]
+
+    generator = TarDataGenerator(sample_list_hartree, base_path='./', n_proc=1)
+
+    for i_sample, sample in enumerate(generator):
+        assert np.allclose(sample['xyzs'], xyzs[i_sample])
+        assert np.allclose(sample['Zs'], Zs[i_sample])
+        assert np.allclose(sample['rot'], rots[i_sample])
+        assert np.allclose(sample['qs'].array, -hartrees[i_sample])
+        assert np.allclose(sample['qs'].lvec, lvecs[i_sample])
 
     tar_path_hartree.unlink()
     tar_path_rho.unlink()
