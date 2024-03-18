@@ -226,8 +226,9 @@ class TarDataGenerator:
                         f"Inconsistent number of samples between hartree and rho lists ({len(name_list_rho)} != {n_sample})"
                     )
 
-            shm_pot = shm_pot_prev = None
-            shm_rho = shm_rho_prev = None
+            shm_pot_prev = None
+            shm_rho_prev = None
+
             for i_sample in range(n_sample):
 
                 if self._timings:
@@ -235,32 +236,27 @@ class TarDataGenerator:
 
                 # Load data from tar(s)
                 rots = sample_list["rots"][i_sample]
-                name_hartree = name_list_hartree[i_sample]
-                pot, lvec_pot, xyzs, Zs = self._get_data(tar_hartree, name_hartree)
+                pot, lvec_pot, xyzs, Zs = self._get_data(tar_hartree, name_list_hartree[i_sample])
                 pot *= -1  # Unit conversion, eV -> V
                 if use_rho:
-                    name_rho = name_list_rho[i_sample]
-                    rho, lvec_rho, _, _ = self._get_data(tar_rho, name_rho)
+                    rho, lvec_rho, _, _ = self._get_data(tar_rho, name_list_rho[i_sample])
+                    rho_shape = rho.shape
+                else:
+                    lvec_rho = None
+                    rho_shape = None
 
                 if self._timings:
                     t1 = time.perf_counter()
 
                 # Put the data to shared memory
                 sample_id_pot = f"{i_proc}_{proc_id}_{i_sample}_pot"
-                shm_pot = mp.shared_memory.SharedMemory(create=True, size=pot.nbytes, name=sample_id_pot)
-                b = np.ndarray(pot.shape, dtype=np.float32, buffer=shm_pot.buf)
-                b[:] = pot[:]
-
+                shm_pot = _put_to_shared_memory(pot, sample_id_pot)
                 if use_rho:
                     sample_id_rho = f"{i_proc}_{proc_id}_{i_sample}_rho"
-                    shm_rho = mp.shared_memory.SharedMemory(create=True, size=rho.nbytes, name=sample_id_rho)
-                    b = np.ndarray(rho.shape, dtype=np.float32, buffer=shm_rho.buf)
-                    b[:] = rho[:]
-                    rho_shape = rho.shape
+                    shm_rho = _put_to_shared_memory(rho, sample_id_rho)
                 else:
                     sample_id_rho = None
-                    rho_shape = None
-                    lvec_rho = None
+                    shm_rho = None
 
                 # Inform the main process of the data using the queue
                 self.q.put((i_proc, sample_id_pot, sample_id_rho, pot.shape, rho_shape, lvec_pot, lvec_rho, xyzs, Zs, rots))
@@ -269,18 +265,8 @@ class TarDataGenerator:
                     t2 = time.perf_counter()
 
                 if i_sample > 0:
-
                     # Wait until main process is done with the previous data
-                    if not event.wait(timeout=60):
-                        raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
-                    event.clear()
-
-                    # Done with shared memory
-                    shm_pot_prev.close()
-                    shm_pot_prev.unlink()
-                    if use_rho:
-                        shm_rho_prev.close()
-                        shm_rho_prev.unlink()
+                    _wait_and_unlink(i_proc, event, shm_pot_prev, shm_rho_prev)
 
                 if self._timings:
                     t3 = time.perf_counter()
@@ -294,14 +280,7 @@ class TarDataGenerator:
                 shm_rho_prev = shm_rho
 
             # Wait to unlink the last data
-            if not event.wait(timeout=60):
-                raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
-            event.clear()
-            shm_pot.close()
-            shm_pot.unlink()
-            if use_rho:
-                shm_rho.close()
-                shm_rho.unlink()
+            _wait_and_unlink(i_proc, event, shm_pot, shm_rho)
 
             tar_hartree.close()
             if use_rho:
@@ -311,6 +290,27 @@ class TarDataGenerator:
             dt = time.perf_counter() - start_time
             print(f"[Worker {i_proc}]: Loaded {n_sample_tot} samples in {dt}s. Average load time: {dt / n_sample_tot}s.")
 
+    def _get_queue_sample(self):
+
+        i_proc, sample_id_pot, sample_id_rho, pot_shape, rho_shape, lvec_pot, lvec_rho, xyzs, Zs, rots = self.q.get(timeout=200)
+
+        shm_pot = mp.shared_memory.SharedMemory(sample_id_pot)
+        pot = np.ndarray(pot_shape, dtype=np.float32, buffer=shm_pot.buf)
+        pot = HartreePotential(pot, lvec_pot)
+        # This starts a copy to the OpenCL device. Better to start it here so that buffer preparation is instant during the simulation.
+        pot.cl_array
+
+        if sample_id_rho is not None:
+            shm_rho = mp.shared_memory.SharedMemory(sample_id_rho)
+            rho = np.ndarray(rho_shape, dtype=np.float32, buffer=shm_rho.buf)
+            rho = ElectronDensity(rho, lvec_rho)
+            rho.cl_array
+        else:
+            shm_rho = None
+            rho = None
+
+        return i_proc, xyzs, Zs, rots, pot, shm_pot, rho, shm_rho, sample_id_pot
+
     def _yield_samples(self):
 
         for _ in range(len(self)):
@@ -318,19 +318,7 @@ class TarDataGenerator:
             if self._timings:
                 t0 = time.perf_counter()
 
-            # Get data info from the queue
-            i_proc, sample_id_pot, sample_id_rho, pot_shape, rho_shape, lvec_pot, lvec_rho, xyzs, Zs, rots = self.q.get(timeout=200)
-
-            # Get data from the shared memory
-            shm_pot = mp.shared_memory.SharedMemory(sample_id_pot)
-            pot = np.ndarray(pot_shape, dtype=np.float32, buffer=shm_pot.buf)
-            pot = HartreePotential(pot, lvec_pot)
-            if sample_id_rho is not None:
-                shm_rho = mp.shared_memory.SharedMemory(sample_id_rho)
-                rho = np.ndarray(rho_shape, dtype=np.float32, buffer=shm_rho.buf)
-                rho = ElectronDensity(rho, lvec_rho)
-            else:
-                rho = None
+            i_proc, xyzs, Zs, rots, pot, shm_pot, rho, shm_rho, sample_id = self._get_queue_sample()
 
             if self._timings:
                 t1 = time.perf_counter()
@@ -344,10 +332,28 @@ class TarDataGenerator:
 
             # Close shared memory and inform producer that the shared memory can be unlinked
             shm_pot.close()
-            if sample_id_rho is not None:
+            if shm_rho is not None:
                 shm_rho.close()
             self.events[i_proc].set()
 
             if self._timings:
                 t3 = time.perf_counter()
-                print(f"[Main, id {sample_id_pot}] Receive data / Yield / Event: " f"{t1 - t0:.5f} / {t2 - t1:.5f} / {t3 - t2:.5f}")
+                print(f"[Main, id {sample_id}] Receive data / Yield / Event: " f"{t1 - t0:.5f} / {t2 - t1:.5f} / {t3 - t2:.5f}")
+
+
+def _put_to_shared_memory(array, name):
+    shm = mp.shared_memory.SharedMemory(create=True, size=array.nbytes, name=name)
+    b = np.ndarray(array.shape, dtype=np.float32, buffer=shm.buf)
+    b[:] = array[:]
+    return shm
+
+
+def _wait_and_unlink(i_proc, event, shm_pot, shm_rho):
+    if not event.wait(timeout=60):
+        raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
+    event.clear()
+    shm_pot.close()
+    shm_pot.unlink()
+    if shm_rho:
+        shm_rho.close()
+        shm_rho.unlink()
