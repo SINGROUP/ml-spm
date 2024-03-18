@@ -139,7 +139,7 @@ class TarDataGenerator:
         - ``'lattice'``: Lattice vectors as an array of shape ``(3, 3)``, where the rows are the vectors.
         - ``'xyz'``: Atom xyz coordinates as an array of shape ``(n_atoms, 3)``.
         - ``'Z'``: Atom atomic numbers as an array of shape ``(n_atoms,)``.
-    
+
     Yields dicts that contain the following:
 
         - ``'xyzs'``: Atom xyz coordinates.
@@ -155,6 +155,8 @@ class TarDataGenerator:
         samples: List of sample dicts as :class:`TarSampleList`. File paths should be relative to ``base_path``.
         base_path: Path to the directory with the tar files.
         n_proc: Number of parallel processes for loading data. The sample lists get divided evenly over the processes.
+            For memory usage, note that a maximum number of samples double the number of processes can be loaded into
+            memory at the same time.
     """
 
     _timings = False
@@ -169,7 +171,8 @@ class TarDataGenerator:
         return sum([len(s["rots"]) for s in self.samples])
 
     def _launch_procs(self):
-        self.q = mp.Queue(maxsize=self.n_proc)
+        queue_size = 2 * self.n_proc
+        self.q = mp.Queue(queue_size)
         self.events = []
         samples_split = np.array_split(self.samples, self.n_proc)
         for i in range(self.n_proc):
@@ -201,6 +204,10 @@ class TarDataGenerator:
         proc_id = str(time.time_ns() + 1000000000 * i_proc)[-10:]
         print(f"Starting worker {i_proc}, id {proc_id}")
 
+        if self._timings:
+            start_time = time.perf_counter()
+            n_sample_tot = 0
+
         for sample_list in sample_lists:
 
             tar_path_hartree, name_list_hartree = sample_list["hartree"]
@@ -219,6 +226,8 @@ class TarDataGenerator:
                         f"Inconsistent number of samples between hartree and rho lists ({len(name_list_rho)} != {n_sample})"
                     )
 
+            shm_pot = shm_pot_prev = None
+            shm_rho = shm_rho_prev = None
             for i_sample in range(n_sample):
 
                 if self._timings:
@@ -253,40 +262,54 @@ class TarDataGenerator:
                     rho_shape = None
                     lvec_rho = None
 
-                if self._timings:
-                    t2 = time.perf_counter()
-
                 # Inform the main process of the data using the queue
                 self.q.put((i_proc, sample_id_pot, sample_id_rho, pot.shape, rho_shape, lvec_pot, lvec_rho, xyzs, Zs, rots))
 
                 if self._timings:
+                    t2 = time.perf_counter()
+
+                if i_sample > 0:
+
+                    # Wait until main process is done with the previous data
+                    if not event.wait(timeout=60):
+                        raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
+                    event.clear()
+
+                    # Done with shared memory
+                    shm_pot_prev.close()
+                    shm_pot_prev.unlink()
+                    if use_rho:
+                        shm_rho_prev.close()
+                        shm_rho_prev.unlink()
+
+                if self._timings:
                     t3 = time.perf_counter()
-
-                # Wait until main process is done with the data
-                if not event.wait(timeout=60):
-                    raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
-                event.clear()
-
-                if self._timings:
-                    t4 = time.perf_counter()
-
-                # Done with shared memory
-                shm_pot.close()
-                shm_pot.unlink()
-                if use_rho:
-                    shm_rho.close()
-                    shm_rho.unlink()
-
-                if self._timings:
-                    t5 = time.perf_counter()
+                    n_sample_tot += 1
                     print(
-                        f"[Worker {i_proc}, id {sample_id_pot}] Get data / Shm / Queue / Wait / Unlink: "
-                        f"{t1 - t0:.5f} / {t2 - t1:.5f} / {t3 - t2:.5f} / {t4 - t3:.5f} / {t5 - t4:.5f}"
+                        f"[Worker {i_proc}, id {sample_id_pot}] Get data / Shm / Wait-unlink: "
+                        f"{t1 - t0:.5f} / {t2 - t1:.5f} / {t3 - t2:.5f} "
                     )
+
+                shm_pot_prev = shm_pot
+                shm_rho_prev = shm_rho
+
+            # Wait to unlink the last data
+            if not event.wait(timeout=60):
+                raise RuntimeError(f"[Worker {i_proc}]: Did not receive signal from main process in 60 seconds.")
+            event.clear()
+            shm_pot.close()
+            shm_pot.unlink()
+            if use_rho:
+                shm_rho.close()
+                shm_rho.unlink()
 
             tar_hartree.close()
             if use_rho:
                 tar_rho.close()
+
+        if self._timings:
+            dt = time.perf_counter() - start_time
+            print(f"[Worker {i_proc}]: Loaded {n_sample_tot} samples in {dt}s. Average load time: {dt / n_sample_tot}s.")
 
     def _yield_samples(self):
 
