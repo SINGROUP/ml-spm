@@ -1,9 +1,9 @@
 import io
 import multiprocessing as mp
-import multiprocessing.shared_memory
 import os
 import tarfile
 import time
+from multiprocessing.shared_memory import SharedMemory
 from os import PathLike
 from pathlib import Path
 from typing import Optional, TypedDict
@@ -297,7 +297,9 @@ class TarDataGenerator:
                 f"Average load time: {dt / n_sample_total}s."
             )
 
-    def _get_queue_sample(self):
+    def _get_queue_sample(
+        self,
+    ) -> tuple[int, np.ndarray, np.ndarray, list[np.ndarray], HartreePotential, SharedMemory, ElectronDensity, SharedMemory, str]:
 
         if self._timings:
             t0 = time.perf_counter()
@@ -307,7 +309,7 @@ class TarDataGenerator:
         if self._timings:
             t1 = time.perf_counter()
 
-        shm_pot = mp.shared_memory.SharedMemory(sample_id_pot)
+        shm_pot = SharedMemory(sample_id_pot)
         pot = np.ndarray(pot_shape, dtype=np.float32, buffer=shm_pot.buf)
         if self.pot is None:
             self.pot = HartreePotential(pot, lvec_pot)
@@ -318,12 +320,12 @@ class TarDataGenerator:
             t2 = time.perf_counter()
 
         if sample_id_rho is not None:
-            shm_rho = mp.shared_memory.SharedMemory(sample_id_rho)
+            shm_rho = SharedMemory(sample_id_rho)
             rho = np.ndarray(rho_shape, dtype=np.float32, buffer=shm_rho.buf)
             if self.rho is None:
                 self.rho = ElectronDensity(rho, lvec_rho)
             else:
-                self.rho.update_array(pot, lvec_pot)
+                self.rho.update_array(rho, lvec_rho)
         else:
             shm_rho = None
             rho = None
@@ -374,7 +376,7 @@ class TarDataGenerator:
 
 
 def _put_to_shared_memory(array, name):
-    shm = mp.shared_memory.SharedMemory(create=True, size=array.nbytes, name=name)
+    shm = SharedMemory(create=True, size=array.nbytes, name=name)
     b = np.ndarray(array.shape, dtype=np.float32, buffer=shm.buf)
     b[:] = array[:]
     return shm
