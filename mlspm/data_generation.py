@@ -157,14 +157,22 @@ class TarDataGenerator:
         n_proc: Number of parallel processes for loading data. The sample lists get divided evenly over the processes.
             For memory usage, note that a maximum number of samples double the number of processes can be loaded into
             memory at the same time.
+        scale_pot: The loaded Hartree potentials are scaled by this factor in order to correct the units. The yielded potential should
+            be in units of V. The default value of -1 works for potentials in units of eV.
+        scale_rho: The loaded electron densities are scaled by this factor in order to correct the units. The yielded density should
+            be in units of e/Å^3 with positive sign for the electron density.
     """
 
     _timings = False
 
-    def __init__(self, samples: list[TarSampleList], base_path: PathLike = "./", n_proc: int = 1):
+    def __init__(
+        self, samples: list[TarSampleList], base_path: PathLike = "./", n_proc: int = 1, scale_pot: float = -1, scale_rho: float = 1
+    ):
         self.samples = samples
         self.base_path = Path(base_path)
         self.n_proc = n_proc
+        self.scale_pot = scale_pot
+        self.scale_rho = scale_rho
         self.pot = None
         self.rho = None
 
@@ -239,10 +247,13 @@ class TarDataGenerator:
                 # Load data from tar(s)
                 rots = sample_list["rots"][i_sample]
                 pot, lvec_pot, xyzs, Zs = self._get_data(tar_hartree, name_list_hartree[i_sample])
-                pot *= -1  # Unit conversion, eV -> V
+                if not np.allclose(self.scale_pot, 1):
+                    pot *= self.scale_pot
                 total_bytes += pot.nbytes
                 if use_rho:
                     rho, lvec_rho, _, _ = self._get_data(tar_rho, name_list_rho[i_sample])
+                    if not np.allclose(self.scale_rho, 1):
+                        rho *= self.scale_rho
                     rho_shape = rho.shape
                     total_bytes += rho.nbytes
                 else:
