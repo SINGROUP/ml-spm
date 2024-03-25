@@ -1,12 +1,14 @@
 import io
 import multiprocessing as mp
 import os
+import queue
 import tarfile
 import time
 from multiprocessing.shared_memory import SharedMemory
 from os import PathLike
 from pathlib import Path
 from typing import Optional, TypedDict
+import warnings
 
 import numpy as np
 from PIL import Image
@@ -19,32 +21,63 @@ class TarWriter:
     :meth:`add_sample`.
 
     Each tar file has a maximum number of samples, and whenever that maximum is reached, a new tar file is created.
-    The generated tar files are named as ``{base_name}_{n}.tar`` and saved into the specified folder. The current tar file
-    handle is always available in the attribute :attr:`ft`, and is automatically closed when the context ends.
+    The generated tar files are named as ``{base_name}_{n}.tar`` and saved into the specified folder.
 
     Arguments:
         base_path: Path to directory where tar files are saved.
         base_name: Base name for output tar files. The number of the tar file is appended to the name.
         max_count: Maximum number of samples per tar file.
-        png_compress_level: Compression level 1-9 for saved png images. Larger value for smaller file size but slower
-            write speed.
+        async_write: Write tar files asynchronously in a parallel process.
     """
 
-    def __init__(self, base_path: PathLike = "./", base_name: str = "", max_count: int = 100, png_compress_level=4):
+    def __init__(self, base_path: PathLike = "./", base_name: str = "", max_count: int = 100, async_write=True):
         self.base_path = Path(base_path)
         self.base_name = base_name
         self.max_count = max_count
-        self.png_compress_level = png_compress_level
+        self.async_write = async_write
 
     def __enter__(self):
         self.sample_count = 0
         self.total_count = 0
         self.tar_count = 0
-        self.ft = self._get_tar_file()
+        if self.async_write:
+            self._launch_write_process()
+        else:
+            self._ft = self._get_tar_file()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.ft.close()
+        if self.async_write:
+            self._event_done.set()
+            if not self._event_tar_close.wait(60):
+                warnings.warn("Write process did not respond within timeout period. Last tar file may not have been closed properly.")
+        else:
+            self._ft.close()
+
+    def _launch_write_process(self):
+        self._q = mp.Queue(1)
+        self._event_done = mp.Event()
+        self._event_tar_close = mp.Event()
+        p = mp.Process(target=self._write_async)
+        p.start()
+
+    def _write_async(self):
+        self._ft = self._get_tar_file()
+        try:
+            while True:
+                try:
+                    sample = self._q.get(block=False)
+                    self._add_sample(*sample)
+                    continue
+                except queue.Empty:
+                    pass
+                if self._event_done.is_set() and self._q.empty():
+                    self._ft.close()
+                    self._event_tar_close.set()
+                    return
+        except:
+            self._ft.close()
+            self._event_tar_close.set()
 
     def _get_tar_file(self):
         file_path = self.base_path / f"{self.base_name}_{self.tar_count}.tar"
@@ -52,22 +85,13 @@ class TarWriter:
             raise RuntimeError(f"Tar file already exists at `{file_path}`")
         return tarfile.open(file_path, "w", format=tarfile.GNU_FORMAT)
 
-    def add_sample(self, X: list[np.ndarray], xyzs: np.ndarray, Y: Optional[np.ndarray] = None, comment_str: str = ""):
-        """
-        Add a sample to the current tar file.
-
-        Arguments:
-            X: AFM images. Each list item corresponds to an AFM tip and is an array of shape (nx, ny, nz).
-            xyzs: Atom coordinates and elements. Each row is one atom and is of the form [x, y, z, element].
-            Y: Image descriptors. Each list item is one descriptor and is an array of shape (nx, ny).
-            comment_str: Comment line (second line) to add to the xyz file.
-        """
+    def _add_sample(self, X, xyzs, Y, comment_str):
 
         if self.sample_count >= self.max_count:
             self.tar_count += 1
             self.sample_count = 0
-            self.ft.close()
-            self.ft = self._get_tar_file()
+            self._ft.close()
+            self._ft = self._get_tar_file()
 
         # Write AFM images
         for i, x in enumerate(X):
@@ -75,9 +99,9 @@ class TarWriter:
                 xj = x[:, :, j]
                 xj = ((xj - xj.min()) / np.ptp(xj) * (2**8 - 1)).astype(np.uint8)  # Convert range to 0-255 integers
                 img_bytes = io.BytesIO()
-                Image.fromarray(xj.T[::-1], mode="L").save(img_bytes, "png", compress_level=self.png_compress_level)
+                Image.fromarray(xj.T[::-1], mode="L").save(img_bytes, "png")
                 img_bytes.seek(0)  # Return stream to start so that addfile can read it correctly
-                self.ft.addfile(get_tarinfo(f"{self.total_count}.{j:02d}.{i}.png", img_bytes), img_bytes)
+                self._ft.addfile(get_tarinfo(f"{self.total_count}.{j:02d}.{i}.png", img_bytes), img_bytes)
                 img_bytes.close()
 
         # Write xyz file
@@ -89,7 +113,7 @@ class TarWriter:
                 xyz_bytes.write(bytearray(f"{xyz[i]:10.8f}\t", "utf-8"))
             xyz_bytes.write(bytearray("\n", "utf-8"))
         xyz_bytes.seek(0)  # Return stream to start so that addfile can read it correctly
-        self.ft.addfile(get_tarinfo(f"{self.total_count}.xyz", xyz_bytes), xyz_bytes)
+        self._ft.addfile(get_tarinfo(f"{self.total_count}.xyz", xyz_bytes), xyz_bytes)
         xyz_bytes.close()
 
         # Write image descriptors (if any)
@@ -98,11 +122,26 @@ class TarWriter:
                 img_bytes = io.BytesIO()
                 np.save(img_bytes, y.astype(np.float32))
                 img_bytes.seek(0)  # Return stream to start so that addfile can read it correctly
-                self.ft.addfile(get_tarinfo(f"{self.total_count}.desc_{i}.npy", img_bytes), img_bytes)
+                self._ft.addfile(get_tarinfo(f"{self.total_count}.desc_{i}.npy", img_bytes), img_bytes)
                 img_bytes.close()
 
         self.sample_count += 1
         self.total_count += 1
+
+    def add_sample(self, X: list[np.ndarray], xyzs: np.ndarray, Y: Optional[np.ndarray] = None, comment_str: str = ""):
+        """
+        Add a sample to the current tar file.
+
+        Arguments:
+            X: AFM images. Each list item corresponds to an AFM tip and is an array of shape (nx, ny, nz).
+            xyzs: Atom coordinates and elements. Each row is one atom and is of the form [x, y, z, element].
+            Y: Image descriptors. Each list item is one descriptor and is an array of shape (nx, ny).
+            comment_str: Comment line (second line) to add to the xyz file.
+        """
+        if self.async_write:
+            self._q.put((X, xyzs, Y, comment_str), block=True, timeout=60)
+        else:
+            self._add_sample(X, xyzs, Y, comment_str)
 
 
 def get_tarinfo(fname: str, file_bytes: io.BytesIO):
@@ -128,13 +167,12 @@ class TarSampleList(TypedDict, total=False):
 
 class TarDataGenerator:
     """
-    Iterable that loads data from tar archives with data saved in npz format for generating samples
-    with the GeneratorAFMTrainer in ppafm.
+    Iterable that loads data from tar archives with data saved in npz format for generating samples with ``GeneratorAFMTrainer``
+    in *ppafm*.
 
     The npz files should contain the following entries:
 
-        - ``'data'``: An array containing the potential/density on a 3D grid. The potential is assumed to be in
-          units of eV and density in units of e/Å^3.
+        - ``'data'``: An array containing the potential/density on a 3D grid.
         - ``'origin'``: Lattice origin in 3D space as an array of shape ``(3,)``.
         - ``'lattice'``: Lattice vectors as an array of shape ``(3, 3)``, where the rows are the vectors.
         - ``'xyz'``: Atom xyz coordinates as an array of shape ``(n_atoms, 3)``.
@@ -148,8 +186,9 @@ class TarDataGenerator:
         - ``'rho_sample'``: Sample electron density if the sample dict contained ``rho``, or ``None`` otherwise.
         - ``'rot'``: Rotation matrix.
 
-    Note: it is recommended to use ``multiprocessing.set_start_method('spawn')`` when using the :class:`TarDataGenerator`.
-    Otherwise a lot of warnings about leaked memory objects may be thrown on exit.
+    Note:
+        It is recommended to use ``multiprocessing.set_start_method('spawn')`` when using the :class:`TarDataGenerator`.
+        Otherwise a lot of warnings about leaked memory objects may be thrown on exit.
 
     Arguments:
         samples: List of sample dicts as :class:`TarSampleList`. File paths should be relative to ``base_path``.

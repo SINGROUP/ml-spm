@@ -116,10 +116,7 @@ if __name__ == "__main__":
                 if i % 100 == 0:
                     elapsed = time.perf_counter() - start_gen
                     eta = elapsed / (i + 1) * (len(generator) - i)
-                    print(
-                        f"{mode} sample {i}/{len(generator)}, writing to `{tar_writer.ft.name}`, "
-                        f"Elapsed: {elapsed:.2f}s, ETA: {eta:.2f}s"
-                    )
+                    print(f"{mode} sample {i}/{len(generator)}, Elapsed: {elapsed:.2f}s, ETA: {eta:.2f}s")
 
         print(f"Done with {mode} - Elapsed time: {time.perf_counter() - start_gen:.1f}")
 
