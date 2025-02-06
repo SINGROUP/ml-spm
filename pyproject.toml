@@ -22,8 +22,9 @@ dependencies = [
     "numpy",
     "scipy",
     "torch",
-    "webdataset",
+    "webdataset<=0.2.86", # Remove version limit when this issue is fixed: https://github.com/webdataset/webdataset/issues/389
     "scikit-image",
+    "ppafm[opencl]"
 ]
 
 [project.urls]

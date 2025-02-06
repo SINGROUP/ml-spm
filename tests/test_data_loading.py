@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import torch
 from PIL import Image
 
 
@@ -73,7 +72,7 @@ def test_shardlist():
 
 def test_decode_xyz():
     from mlspm.data_loading import decode_xyz
-    from mlspm.utils import read_xyzs, write_to_xyz
+    from mlspm.utils import write_to_xyz
 
     xyz_path = "./test_decode.xyx"
     # fmt: off

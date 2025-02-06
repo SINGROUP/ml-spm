@@ -258,9 +258,9 @@ def load_checkpoint(
     import torch
 
     if rank is None:
-        state = torch.load(file_name)
+        state = torch.load(file_name, weights_only=False)
     else:
-        state = torch.load(file_name, map_location={"cuda:0": f"cuda:{rank}"})
+        state = torch.load(file_name, map_location={"cuda:0": f"cuda:{rank}"}, weights_only=False)
     model.load_state_dict(state["model_params"])
 
     if optimizer:
