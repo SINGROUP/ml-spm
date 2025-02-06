@@ -14,7 +14,7 @@ dependencies:
   - matplotlib
   - numpy
   - scipy
-  - webdataset
+  - webdataset<=0.2.86
   - scikit-image
   - pip:
     - ppafm[opencl]

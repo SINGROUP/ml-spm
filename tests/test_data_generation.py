@@ -38,7 +38,7 @@ def test_tar_writer():
 
     with pytest.raises(RuntimeError):
         # Cannot overwrite an existing file
-        with TarWriter(base_path, base_name, max_count=10) as tar_writer:
+        with TarWriter(base_path, base_name, max_count=10, async_write=False) as tar_writer:
             pass
 
     rmtree(base_path)

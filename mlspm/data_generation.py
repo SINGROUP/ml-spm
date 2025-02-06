@@ -251,7 +251,7 @@ class TarDataGenerator:
     def _load_samples(self, sample_lists: list[TarSampleList], i_proc: int, event: mp.Event):
 
         proc_id = str(time.time_ns() + 1000000000 * i_proc)[-10:]
-        print(f"Starting worker {i_proc}, id {proc_id}")
+        print(f"Starting worker {i_proc}, id {proc_id}, samples: {len(sample_lists)}")
 
         start_time = time.perf_counter()
         total_bytes = 0
