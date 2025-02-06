@@ -1,15 +1,14 @@
 name: ml-spm
 channels:
   - pytorch
-  - nvidia/label/cuda-11.8.0
+  - nvidia/label/cuda-12.1.0
   - conda-forge
   - defaults
 dependencies:
   - python=3.11
   - pip
   - pytorch
-  - torchvision
-  - torchaudio
+  - pytorch-cuda=12.1
   - cuda
   - ninja
   - matplotlib
